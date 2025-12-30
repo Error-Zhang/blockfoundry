@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  resources Resource[]
+  projects  Project[]
+}
+
+model Resource {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String
+  path      String
+  size      Int?
+  userId    Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  userId      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User?    @relation(fields: [userId], references: [id])
+}
+
+// 纹理资源模型
+model TextureResource {
+  id            String   @id @default(uuid())
+  name          String
+  description   String   @default("")
+  fileName      String
+  filePath      String   @unique
+  thumbnailUrl  String
+  originalUrl   String
+  width         Int
+  height        Int
+  format        String
+  fileSize      Int
+  isMainTexture Boolean  @default(true)
+  isPublic      Boolean  @default(true)
+  tags          String   @default("") // JSON string array
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  usageCount    Int      @default(0)
+
+  @@index([filePath])
+  @@index([isPublic])
+}
+
+// 虚拟文件夹模型
+model VirtualFolder {
+  id        String   @id @default(uuid())
+  name      String
+  path      String   @unique // 虚拟路径，如 "textures.blocks.stone"
+  parentId  String?
+  parent    VirtualFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  VirtualFolder[] @relation("FolderHierarchy")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([path])
+  @@index([parentId])
+}

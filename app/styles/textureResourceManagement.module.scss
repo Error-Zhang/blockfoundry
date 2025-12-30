@@ -1,0 +1,142 @@
+.textureResourceManagement {
+  min-height: 100vh;
+
+  .mainContentArea {
+    display: flex;
+    gap: $spacing-md;
+  }
+
+  .tableContainer {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global {
+    .ant-row {
+      margin-bottom: $spacing-md;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .ant-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ant-card {
+      border-radius: $border-radius-md;
+      box-shadow: $shadow-base;
+      
+      .ant-card-head {
+        border-bottom: 1px solid $color-border-secondary;
+        
+        .ant-card-head-title {
+          font-weight: $font-weight-semibold;
+          color: $color-text-primary;
+        }
+      }
+    }
+
+    .ant-btn {
+      border-radius: $border-radius-base;
+      font-weight: $font-weight-medium;
+      
+      &.ant-btn-primary {
+        border: none;
+        
+        &:hover {
+          transform: translateY(-1px);
+        }
+      }
+    }
+
+    .ant-table {
+      .ant-table-thead > tr > th {
+        background-color: $color-bg-layout;
+        border-bottom: 2px solid $color-border-secondary;
+        font-weight: $font-weight-semibold;
+        color: $color-text-primary;
+      }
+      
+      .ant-table-tbody > tr {
+        transition: all $transition-fast;
+        
+        &:hover {
+          background-color: $color-bg-spotlight;
+          transform: translateY(-1px);
+          box-shadow: $shadow-base;
+        }
+      }
+    }
+
+    .ant-tag {
+      border-radius: $border-radius-sm;
+      font-weight: $font-weight-medium;
+      border: none;
+      
+      &.ant-tag-blue {
+        background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+        color: $color-info;
+      }
+      
+      &.ant-tag-green {
+        background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+        color: $color-success;
+      }
+      
+      &.ant-tag-purple {
+        background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+        color: #722ed1;
+      }
+    }
+
+    .ant-modal {
+      .ant-modal-content {
+        border-radius: $border-radius-md;
+        overflow: hidden;
+      }
+      
+      .ant-modal-header {
+        background: linear-gradient(135deg, $color-bg-layout 0%, $color-bg-spotlight 100%);
+        border-bottom: 1px solid $color-border-secondary;
+        
+        .ant-modal-title {
+          font-weight: $font-weight-semibold;
+          color: $color-text-primary;
+        }
+      }
+    }
+  }
+
+  // 响应式设计
+  @media (max-width: 1200px) {
+    :global {
+      .ant-col {
+        &:first-child {
+          span: 8;
+        }
+        
+        &:last-child {
+          span: 16;
+        }
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: $spacing-md;
+    
+    :global {
+      .ant-row {
+        flex-direction: column;
+      }
+      
+      .ant-col {
+        width: 100% !important;
+        margin-bottom: $spacing-md;
+      }
+    }
+  }
+}

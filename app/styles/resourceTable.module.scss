@@ -1,0 +1,77 @@
+.resourceTableCard {
+  :global {
+    .ant-card-head-wrapper {
+      display: flex;
+      gap: $spacing-sm;
+    }
+
+    .ant-input-outlined:focus-within {
+      box-shadow: none;
+    }
+
+    .ant-card-body {
+      padding: $spacing-md;
+    }
+
+    .ant-table {
+      .ant-table-thead > tr > th {
+        background-color: $color-bg-layout;
+        font-weight: $font-weight-semibold;
+      }
+
+      .ant-table-tbody > tr {
+        &:hover {
+          background-color: $color-bg-spotlight;
+        }
+      }
+
+      .ant-tag {
+        margin: 2px;
+        border-radius: $border-radius-sm;
+      }
+
+      .ant-btn {
+        &.ant-btn-text {
+          padding: $spacing-xs $spacing-sm;
+          height: auto;
+
+          &:hover {
+            background-color: $color-bg-spotlight;
+          }
+        }
+
+        &.ant-btn-link {
+          padding: 0;
+          height: auto;
+          font-size: $font-size-xs;
+        }
+      }
+    }
+
+    .ant-pagination {
+      margin-top: $spacing-md;
+      text-align: right;
+    }
+  }
+
+  .search {
+    max-width: fit-content;
+  }
+
+  .resourceThumbnail {
+    object-fit: cover;
+    border-radius: $border-radius-sm;
+    border: 1px solid $color-border-secondary;
+  }
+
+  .resourceName {
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  .resourceFilename {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    margin-top: 2px;
+  }
+}

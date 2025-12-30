@@ -1,0 +1,124 @@
+.resourceModal {
+  :global {
+    .ant-form {
+      .ant-form-item {
+        margin-bottom: $spacing-md;
+      }
+
+      .ant-input,
+      .ant-select,
+      .ant-input-number {
+        border-radius: $border-radius-base;
+      }
+
+      .ant-btn {
+        border-radius: $border-radius-base;
+      }
+    }
+  }
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.previewModal {
+  .previewImageContainer {
+    text-align: center;
+    padding: $spacing-md;
+    background-color: $color-bg-spotlight;
+    border-radius: $border-radius-md;
+  }
+
+  .previewImage {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: $border-radius-md;
+    box-shadow: $shadow-base;
+  }
+
+  .previewTags {
+    margin-top: $spacing-md;
+  }
+
+  :global {
+    .ant-list {
+      .ant-list-item {
+        padding: $spacing-sm 0;
+        border-bottom: 1px solid $color-border-secondary;
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+
+      .ant-list-item-meta {
+        .ant-list-item-meta-title {
+          font-size: $font-size-xs;
+          color: $color-text-secondary;
+          margin-bottom: $spacing-xs;
+        }
+
+        .ant-list-item-meta-description {
+          font-size: $font-size-sm;
+          color: $color-text-primary;
+          font-weight: $font-weight-medium;
+        }
+      }
+    }
+  }
+}
+
+.bundleModal {
+  .bundleDescription {
+    margin-bottom: $spacing-md;
+    color: $color-text-secondary;
+  }
+
+  .bundleEmpty {
+    color: $color-text-tertiary;
+    font-style: italic;
+  }
+
+  :global {
+    .ant-card {
+      margin-bottom: $spacing-sm;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .ant-card-head {
+        padding: $spacing-sm $spacing-base;
+        min-height: auto;
+
+        .ant-card-head-title {
+          font-size: $font-size-sm;
+          font-weight: $font-weight-medium;
+        }
+      }
+
+      .ant-card-body {
+        padding: $spacing-base;
+        font-size: $font-size-xs;
+        color: $color-text-secondary;
+
+        > div {
+          margin-bottom: $spacing-xs;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+      }
+
+      .ant-btn {
+        &.ant-btn-sm {
+          height: $spacing-lg;
+          padding: 0 $spacing-sm;
+          font-size: $font-size-xs;
+        }
+      }
+    }
+  }
+}

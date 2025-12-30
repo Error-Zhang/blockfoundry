@@ -1,0 +1,77 @@
+.dashboardContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: $height-lg $spacing-lg;
+}
+
+.contentWrapper {
+  width: 100%;
+  max-width: 600px;
+}
+
+.logoContainer {
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, $color-primary, $color-primary-hover);
+  border-radius: $spacing-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto $spacing-xl;
+}
+
+.logoText {
+  color: white;
+  font-size: $height-lg;
+  font-weight: $font-weight-bold;
+}
+
+.mainTitle {
+  margin: 0;
+  color: $color-text-primary;
+  font-size: $height-lg;
+  font-weight: $font-weight-bold;
+}
+
+.subTitle {
+  margin: 0;
+  font-weight: $font-weight-normal;
+}
+
+.description {
+  font-size: $font-size-lg;
+  line-height: 1.6;
+  margin: $spacing-lg 0;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-lg;
+  margin-top: $height-lg;
+  width: 100%;
+}
+
+.featureCard {
+  padding: $spacing-lg;
+  border-radius: $border-radius-lg;
+  text-align: center;
+  transition: all $transition-base;
+}
+
+.featureIcon {
+  font-size: $spacing-xl;
+  margin-bottom: $spacing-base;
+}
+
+.featureTitle {
+  margin: 0 0 $spacing-sm 0;
+}
+
+.featureDesc {
+  margin: 0;
+}

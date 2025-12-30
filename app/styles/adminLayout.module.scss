@@ -1,0 +1,265 @@
+// 管理后台布局样式
+.mainLayout {
+  min-height: 100vh;
+}
+
+.adminSidebar {
+  border-right: none !important;
+  position: relative;
+  transition: all $transition-base;
+  background: $color-bg-base;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid $color-border;
+}
+
+.header {
+  padding: 0 $spacing-lg;
+  background: $color-bg-base;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $color-border;
+  box-shadow: $shadow-sm;
+}
+
+.toggleButton {
+  font-size: $font-size-base;
+  width: $height-lg;
+  height: $height-lg;
+  color: $color-text-primary;
+}
+
+.notificationButton {
+  font-size: $font-size-base;
+  color: $color-text-primary;
+}
+
+.userMenu {
+  cursor: pointer;
+  padding: $spacing-sm $spacing-base;
+  border-radius: $border-radius-base;
+  transition: background-color $transition-fast;
+}
+
+.userAvatar {
+  background: linear-gradient(135deg, $color-primary, $color-primary-hover);
+}
+
+.userName {
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.content {
+  padding: $spacing-xl;
+  min-height: calc(100vh - 112px);
+  background: $color-bg-base;
+  border-radius: $border-radius-md;
+  box-shadow: $shadow-base;
+  overflow: auto;
+}
+
+// Logo区域样式
+.logoArea {
+  height: $height-xxl;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  transition: all $transition-base;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-base;
+
+  &.collapsed {
+    justify-content: center;
+    padding: 0;
+  }
+
+  &:not(.collapsed) {
+    justify-content: flex-start;
+    padding: 0 $spacing-lg;
+  }
+
+  .logoBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  .logoContent {
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    gap: $spacing-md;
+
+    .collapsed & {
+      gap: 0;
+    }
+  }
+}
+
+// Logo图标样式
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: $font-weight-bold;
+  border-radius: $border-radius-lg + 6px; // 14px
+  transition: all $transition-base;
+  background: linear-gradient(135deg, $color-primary, $color-primary-hover);
+  box-shadow: $shadow-md;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+
+  &.collapsed {
+    width: $height-base;
+    height: $height-base;
+    font-size: $font-size-lg;
+    border-radius: $spacing-base;
+  }
+
+  &:not(.collapsed) {
+    width: $height-lg;
+    height: $height-lg;
+    font-size: $font-size-xl;
+  }
+}
+
+// Logo文字样式
+.logoText {
+  .logoTitle {
+    margin: 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    letter-spacing: 0.5px;
+    color: $color-text-primary;
+  }
+
+  .logoSubtitle {
+    font-size: $font-size-xs;
+    margin-top: 2px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+}
+
+// 菜单容器样式
+.menuContainer {
+  padding: $spacing-lg $spacing-base;
+  flex: 1;
+  overflow: auto;
+}
+
+// 侧边栏菜单样式
+.sidebarMenu {
+  background: transparent !important;
+  border: none !important;
+  font-size: $font-size-sm;
+
+  :global {
+    .ant-menu-item {
+      color: $color-text-secondary;
+      border-radius: $border-radius-base;
+      margin: $spacing-xs 0;
+      padding: 0 $spacing-md;
+      height: $height-base;
+      line-height: $height-base;
+      transition: all $transition-fast;
+
+      &:hover {
+        background-color: $color-bg-spotlight;
+        color: $color-text-primary;
+        transform: translateX(2px);
+      }
+
+      &.ant-menu-item-selected {
+        background: $color-border-secondary !important;
+        color: $color-text-primary !important;
+        border: 1px solid $color-border !important;
+        box-shadow: $shadow-base;
+
+        &::before {
+          background: $color-primary;
+          transform: scaleY(1);
+        }
+
+        .ant-menu-item-icon {
+          color: $color-text-primary !important;
+        }
+      }
+
+      .ant-menu-item-icon {
+        font-size: $spacing-md;
+        margin-right: $spacing-base;
+      }
+
+      // 菜单项左侧指示条
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        border-radius: 0 2px 2px 0;
+        transform: scaleY(0);
+        transition: transform $transition-base;
+      }
+    }
+  }
+}
+
+// 底部状态区域
+.sidebarFooter {
+  padding: $spacing-lg $spacing-lg;
+  position: relative;
+  border-top: 1px solid $color-border;
+  background: $color-bg-base;
+
+  .footerBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  .statusIndicator {
+    display: flex;
+    align-items: center;
+    gap: $spacing-base;
+    font-size: 13px;
+    font-weight: $font-weight-medium;
+    position: relative;
+    z-index: 1;
+    color: $color-text-secondary;
+
+    .statusDot {
+      width: $spacing-sm;
+      height: $spacing-sm;
+      border-radius: 50%;
+      background: $color-success;
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 4px rgba(82, 196, 26, 0.5);
+    }
+  }
+}
+
+// 脉冲动画
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}

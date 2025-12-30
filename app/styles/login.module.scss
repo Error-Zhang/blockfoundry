@@ -1,0 +1,171 @@
+.loginContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-layout;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: moveBackground 20s linear infinite;
+  }
+}
+
+@keyframes moveBackground {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(50px, 50px);
+  }
+}
+
+.loginBox {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 450px;
+  padding: 20px;
+}
+
+.loginCard {
+  border-radius: $border-radius-xl;
+  box-shadow: $shadow-base;
+  backdrop-filter: blur(10px);
+  background: $color-bg-base;
+  padding: $spacing-xxl $spacing-xl;
+  border: 1px solid $color-border;
+
+  :global {
+    .ant-card-body {
+      padding: 0;
+    }
+  }
+}
+
+.logoSection {
+  text-align: center;
+  margin-bottom: $spacing-xxl;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  background: linear-gradient(135deg, $color-primary, $color-primary-hover);
+  border-radius: $border-radius-xxl;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xxxl;
+  font-weight: $font-weight-bold;
+  color: white;
+  box-shadow: $shadow-md;
+  transition: transform $transition-base;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+.title {
+  margin-bottom: $spacing-sm !important;
+  color: $color-text-primary;
+}
+
+.footer {
+  text-align: center;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-border-secondary;
+}
+
+.loginCard {
+  :global {
+    .ant-form-item {
+      margin-bottom: $spacing-lg;
+    }
+
+    .ant-input-affix-wrapper {
+      border-radius: $border-radius-md;
+      
+      &:hover {
+        border-color: $color-primary;
+      }
+      
+      &:focus,
+      &.ant-input-affix-wrapper-focused {
+        border-color: $color-primary;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      }
+
+      // 取消输入框内部 input 的边框
+      .ant-input {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        
+        &:hover,
+        &:focus {
+          border: none !important;
+          box-shadow: none !important;
+          outline: none !important;
+        }
+      }
+    }
+
+    .ant-input {
+      border-radius: $border-radius-md;
+      
+      &:hover {
+        border-color: $color-primary;
+      }
+      
+      &:focus {
+        border-color: $color-primary;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    .ant-btn-primary {
+      background: $color-primary;
+      border: none;
+      border-radius: $border-radius-md;
+      height: $height-lg;
+      font-size: $font-size-base;
+      font-weight: $font-weight-medium;
+      box-shadow: $shadow-md;
+      transition: all $transition-base;
+
+      &:hover {
+        background: $color-primary-hover !important;
+        transform: translateY(-2px);
+        box-shadow: $shadow-lg;
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+
+    .ant-alert {
+      border-radius: $border-radius-md;
+    }
+
+    .ant-btn-link {
+      &:hover {
+        transform: none !important;
+        box-shadow: none !important;
+      }
+    }
+  }
+}
