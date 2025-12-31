@@ -9,6 +9,7 @@ import EditModal from './components/EditModal';
 import PreviewModal from './components/PreviewModal';
 import BatchUploadModal from './components/BatchUploadModal';
 import { TextureResource } from './lib/types';
+import { downloadTextureResource } from './lib/utils';
 import {
 	getTextureResources,
 	createTextureResource,
@@ -16,7 +17,6 @@ import {
 	deleteTextureResource,
 } from './services/textureResourceService';
 import styles from '../../styles/textureResourceManagement.module.scss';
-import { mockResources } from './lib/mock';
 import { CloudUploadOutlined, FileImageOutlined, FolderOutlined, TagsOutlined } from '@ant-design/icons';
 
 export default function TextureResourceManagementPage() {
@@ -30,6 +30,10 @@ export default function TextureResourceManagementPage() {
 	const [batchUploadVisible, setBatchUploadVisible] = useState(false);
 	const [searchText, setSearchText] = useState('');
 	const [currentFolderPath, setCurrentFolderPath] = useState('');
+	const [folderCount, setFolderCount] = useState(0);
+	const [tagCount, setTagCount] = useState(0);
+	const [isExpanded, setIsExpanded] = useState(false);
+	const [highlightedResourceId, setHighlightedResourceId] = useState<string | null>(null);
 
 	// 侧边栏宽度状态
 	const [sidebarWidth, setSidebarWidth] = useState(300);
@@ -66,6 +70,17 @@ export default function TextureResourceManagementPage() {
 	useEffect(() => {
 		loadResources();
 	}, [currentFolderPath]);
+
+	// 计算标签数量
+	useEffect(() => {
+		const allTags = new Set<string>();
+		resources.forEach((resource) => {
+			resource.tags.forEach((tag) => {
+				if (tag) allTags.add(tag);
+			});
+		});
+		setTagCount(allTags.size);
+	}, [resources]);
 
 	// 过滤资源
 	const filteredResources = resources.filter((resource) => {
@@ -161,7 +176,13 @@ export default function TextureResourceManagementPage() {
 
 	// 处理下载
 	const handleDownload = (resource: TextureResource) => {
-		message.info('开始下载纹理资源...');
+		try {
+			downloadTextureResource(resource);
+			message.success('开始下载文件');
+		} catch (error) {
+			console.error('下载文件失败:', error);
+			message.error('下载文件失败');
+		}
 	};
 
 	// 处理批量上传
@@ -204,13 +225,13 @@ export default function TextureResourceManagementPage() {
 		{
 			key: 'texturePacks',
 			title: '纹理包数',
-			value: 0,
+			value: folderCount,
 			prefix: <FolderOutlined />,
 		},
 		{
-			key: 'categories',
-			title: '分类数量',
-			value: 0,
+			key: 'tags',
+			title: '标签数量',
+			value: tagCount,
 			prefix: <TagsOutlined />,
 		},
 		{
@@ -225,39 +246,53 @@ export default function TextureResourceManagementPage() {
 	return (
 		<div className={styles.textureResourceManagement}>
 			{/* 统计卡片 */}
-			<StatisticsCards cardConfigs={cardConfigs} />
+			<div className={`${styles.statisticsCards} ${isExpanded ? styles.hidden : styles.visible}`}>
+				<StatisticsCards cardConfigs={cardConfigs} />
+			</div>
 
 			{/* 主要内容区域 */}
 			<div className={styles.mainContentArea}>
-					<DirectoryTree
-					resources={resources}
-					onResourcesChange={setResources}
-					onResourceSelect={() => {}}
-					onFolderSelect={setCurrentFolderPath}
-					onFolderCreated={loadResources}
-					width={sidebarWidth}
-					onWidthChange={handleSidebarWidthChange}
-				/>
+						<div className={`${styles.directoryTree} ${isExpanded ? styles.hidden : styles.visible}`}>
+								<DirectoryTree
+									resources={resources}
+									onResourcesChange={setResources}
+									onResourceSelect={(resource) => {
+										if (resource) {
+											setHighlightedResourceId(resource.id);
+											// 3秒后清除高亮
+											setTimeout(() => setHighlightedResourceId(null), 3000);
+										}
+									}}
+									onFolderSelect={setCurrentFolderPath}
+									onFolderCreated={loadResources}
+									onFolderCountChange={setFolderCount}
+									width={sidebarWidth}
+									onWidthChange={handleSidebarWidthChange}
+								/>
+							</div>
 				<div className={styles.tableContainer}>
-					<ResourceTable
-							resources={filteredResources}
-							loading={loading}
-							searchText={searchText}
-							onSearchChange={setSearchText}
-							onPreview={handlePreview}
-							onEdit={handleEdit}
-							onDelete={handleDelete}
-							onDownload={handleDownload}
-							onUpload={handleUpload}
-							onBatchUpload={handleBatchUploadOpen}
-							onCreateNew={() => {
-								setEditingResource(null);
-								form.resetFields();
-								setModalVisible(true);
-							}}
-							onBundleManage={handleBundleManage}
-						/>
-				</div>
+						<ResourceTable
+								resources={filteredResources}
+								loading={loading}
+								searchText={searchText}
+								onSearchChange={setSearchText}
+								onPreview={handlePreview}
+								onEdit={handleEdit}
+								onDelete={handleDelete}
+								onDownload={handleDownload}
+								onUpload={handleUpload}
+								onBatchUpload={handleBatchUploadOpen}
+								onCreateNew={() => {
+									setEditingResource(null);
+									form.resetFields();
+									setModalVisible(true);
+								}}
+								onBundleManage={handleBundleManage}
+								isExpanded={isExpanded}
+								onExpandToggle={() => setIsExpanded(!isExpanded)}
+								highlightedResourceId={highlightedResourceId}
+							/>
+					</div>
 			</div>
 
 			{/* 模态框 */}

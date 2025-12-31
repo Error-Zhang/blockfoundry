@@ -4,6 +4,7 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
+import { TEXTURE_UPLOAD_DIR } from '@/lib/constants';
 
 // POST - 批量上传纹理资源
 export async function POST(request: NextRequest) {
@@ -17,9 +18,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		// 确保上传目录存在
-		const uploadDir = join(process.cwd(), 'data', 'uploads', 'textures');
-		if (!existsSync(uploadDir)) {
-			await mkdir(uploadDir, { recursive: true });
+		if (!existsSync(TEXTURE_UPLOAD_DIR)) {
+			await mkdir(TEXTURE_UPLOAD_DIR, { recursive: true });
 		}
 
 		const resources = [];
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 			try {
 				const { file, name, virtualPath } = check;
 				const fileName = `${Date.now()}_${file.name}`;
-				const filePath = join(uploadDir, fileName);
+				const filePath = join(TEXTURE_UPLOAD_DIR, fileName);
 
 				// 保存文件
 				const bytes = await file.arrayBuffer();
@@ -81,13 +81,11 @@ export async function POST(request: NextRequest) {
 						description: '',
 						fileName: file.name,
 						filePath: virtualPath,
-						thumbnailUrl: `/uploads/textures/${fileName}`,
 						originalUrl: `/uploads/textures/${fileName}`,
 						width,
 						height,
 						format,
 						fileSize: file.size,
-						isMainTexture: true,
 						isPublic: true,
 						tags: JSON.stringify([]),
 						usageCount: 0,

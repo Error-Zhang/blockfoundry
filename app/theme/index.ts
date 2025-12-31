@@ -87,5 +87,13 @@ export const lightTheme = {
       borderRadius: 6,
       headerBg: '#fafafa',
     },
+    Select: {
+      optionSelectedBg: '#f5f5f5',
+      optionActiveBg: '#fafafa',
+    },
+    Dropdown: {
+      controlItemBgActive: '#f5f5f5',
+      controlItemBgHover: '#fafafa',
+    },
   },
 }

@@ -1,14 +1,64 @@
 .textureResourceManagement {
-  min-height: 100vh;
+  .statisticsCards {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    
+    &.hidden {
+      max-height: 0;
+      opacity: 0;
+      margin-bottom: 0;
+      transform: translateY(-20px);
+    }
+    
+    &.visible {
+      max-height: 500px;
+      opacity: 1;
+      margin-bottom: $spacing-md;
+      transform: translateY(0);
+    }
+  }
 
   .mainContentArea {
     display: flex;
     gap: $spacing-md;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .directoryTree {
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &.hidden {
+      width: 0 !important;
+      min-width: 0 !important;
+      opacity: 0;
+      margin-right: 0 !important;
+      transform: translateX(-20px);
+      pointer-events: none;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    &.visible {
+      opacity: 1;
+      transform: translateX(0);
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                  margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
   }
 
   .tableContainer {
     flex: 1;
     min-width: 0;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   :global {
@@ -28,10 +78,10 @@
     .ant-card {
       border-radius: $border-radius-md;
       box-shadow: $shadow-base;
-      
+
       .ant-card-head {
         border-bottom: 1px solid $color-border-secondary;
-        
+
         .ant-card-head-title {
           font-weight: $font-weight-semibold;
           color: $color-text-primary;
@@ -42,10 +92,10 @@
     .ant-btn {
       border-radius: $border-radius-base;
       font-weight: $font-weight-medium;
-      
+
       &.ant-btn-primary {
         border: none;
-        
+
         &:hover {
           transform: translateY(-1px);
         }
@@ -59,10 +109,10 @@
         font-weight: $font-weight-semibold;
         color: $color-text-primary;
       }
-      
+
       .ant-table-tbody > tr {
         transition: all $transition-fast;
-        
+
         &:hover {
           background-color: $color-bg-spotlight;
           transform: translateY(-1px);
@@ -75,17 +125,17 @@
       border-radius: $border-radius-sm;
       font-weight: $font-weight-medium;
       border: none;
-      
+
       &.ant-tag-blue {
         background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
         color: $color-info;
       }
-      
+
       &.ant-tag-green {
         background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
         color: $color-success;
       }
-      
+
       &.ant-tag-purple {
         background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
         color: #722ed1;
@@ -97,45 +147,15 @@
         border-radius: $border-radius-md;
         overflow: hidden;
       }
-      
+
       .ant-modal-header {
         background: linear-gradient(135deg, $color-bg-layout 0%, $color-bg-spotlight 100%);
         border-bottom: 1px solid $color-border-secondary;
-        
+
         .ant-modal-title {
           font-weight: $font-weight-semibold;
           color: $color-text-primary;
         }
-      }
-    }
-  }
-
-  // 响应式设计
-  @media (max-width: 1200px) {
-    :global {
-      .ant-col {
-        &:first-child {
-          span: 8;
-        }
-        
-        &:last-child {
-          span: 16;
-        }
-      }
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: $spacing-md;
-    
-    :global {
-      .ant-row {
-        flex-direction: column;
-      }
-      
-      .ant-col {
-        width: 100% !important;
-        margin-bottom: $spacing-md;
       }
     }
   }

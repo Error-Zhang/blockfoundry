@@ -1,14 +1,8 @@
 .directoryTreeCardWrapper {
   position: relative;
 
-  :global {
-    .ant-card:hover {
-      transform: none; // 该属性会影响内层fixed元素的定位
-    }
-  }
-
   .directoryTreeCard {
-    height: calc(100vh - 200px);
+    height: 100%;
 
     :global {
       .ant-card-body {
@@ -39,6 +33,29 @@
         .ant-tree-draggable-icon {
           display: none !important;
         }
+
+        // 拖拽时的样式
+        .ant-tree-treenode {
+          // 隐藏上下边界线
+          &.drag-over-gap-top,
+          &.drag-over-gap-bottom {
+            ::before,
+            &::after {
+              display: none !important;
+            }
+          }
+
+          &.drag-over {
+            // 拖拽到节点内部时,放大并高亮
+            > .ant-tree-node-content-wrapper {
+              background-color: rgba(24, 144, 255, 0.1) !important;
+              border: 2px dashed #1890ff;
+              border-radius: 4px;
+              transform: scale(1.1);
+              transition: all 0.2s ease;
+            }
+          }
+        }
       }
     }
 
@@ -53,36 +70,7 @@
       }
     }
 
-    .contextMenu {
-      position: fixed;
-      z-index: 999;
-      background: $color-bg-base;
-      border: 1px solid $color-border;
-      border-radius: $border-radius-sm;
-      box-shadow: $shadow-base;
-      min-width: 150px;
 
-      :global {
-        .ant-menu {
-          border: none;
-          box-shadow: none;
-
-          .ant-menu-item {
-            margin: 0;
-            padding: $spacing-sm $spacing-md;
-            line-height: 1.5;
-
-            &:hover {
-              background-color: $color-bg-spotlight;
-            }
-          }
-
-          .ant-menu-item-divider {
-            margin: $spacing-xs 0;
-          }
-        }
-      }
-    }
   }
 
   // 拖拽手柄样式
@@ -113,6 +101,37 @@
   &.resizing {
     .resizeHandle {
       background-color: $color-primary;
+    }
+  }
+}
+
+.contextMenu {
+  position: fixed;
+  z-index: 999;
+  background: $color-bg-base;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  box-shadow: $shadow-base;
+  min-width: 150px;
+
+  :global {
+    .ant-menu {
+      border: none;
+      box-shadow: none;
+
+      .ant-menu-item {
+        margin: 0;
+        padding: $spacing-sm $spacing-md;
+        line-height: 1.5;
+
+        &:hover {
+          background-color: $color-bg-spotlight;
+        }
+      }
+
+      .ant-menu-item-divider {
+        margin: $spacing-xs 0;
+      }
     }
   }
 }

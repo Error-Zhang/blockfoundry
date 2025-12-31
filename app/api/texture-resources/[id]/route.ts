@@ -65,17 +65,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 			}
 		);
 	} catch (error) {
-		console.error('更新纹理资源失败:', error);
-		return NextResponse.json(
-			{ success: false, error: '更新纹理资源失败' },
-			{
-				status: 500,
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			}
-		);
-	}
+			console.error('更新纹理资源失败:', error);
+			const errorMessage = error instanceof Error ? error.message : '更新纹理资源失败';
+			return NextResponse.json(
+				{ success: false, error: errorMessage },
+				{
+					status: 500,
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				}
+			);
+		}
 }
 
 // DELETE - 删除纹理资源
@@ -92,18 +93,33 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 			return NextResponse.json({ success: false, error: '纹理资源不存在' }, { status: 404 });
 		}
 
-		// 删除文件系统中的文件
-		const uploadDir = join(process.cwd(), 'data', 'uploads', 'textures');
+		// 检查是否有其他记录引用同一个文件
 		const originalFileName = resource.originalUrl?.split('/').pop();
+		let shouldDeleteFile = true;
 
 		if (originalFileName) {
+			// 查询数据库中是否有其他记录使用相同的文件
+			const sameFileCount = await prisma.textureResource.count({
+				where: {
+					originalUrl: resource.originalUrl,
+					id: { not: id }, // 排除当前要删除的记录
+				},
+			});
+
+			// 如果还有其他记录引用同一个文件，则不删除物理文件
+			shouldDeleteFile = sameFileCount === 0;
+		}
+
+		// 只有在没有其他引用时才删除物理文件
+		if (shouldDeleteFile && originalFileName) {
+			const uploadDir = join(process.cwd(), 'data', 'uploads', 'textures');
 			const originalPath = join(uploadDir, originalFileName);
 			if (existsSync(originalPath)) {
 				await unlink(originalPath);
 			}
 		}
 
-		// 从数据库删除
+		// 从数据库删除记录
 		await prisma.textureResource.delete({
 			where: { id },
 		});
@@ -111,7 +127,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 		return NextResponse.json(
 			{
 				success: true,
-				message: '删除成功',
+				message: shouldDeleteFile ? '删除成功' : '记录已删除（文件仍被其他记录引用）',
 			},
 			{
 				headers: {

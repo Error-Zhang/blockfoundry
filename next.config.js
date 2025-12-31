@@ -6,6 +6,14 @@ const nextConfig = {
 		implementation: 'sass',
 		additionalData: `@use '@/app/styles/variables.scss' as *;`,
 	},
+	async rewrites() {
+		return [
+			{
+				source: '/uploads/:path*',
+				destination: '/api/static/uploads/:path*',
+			},
+		];
+	},
   webpack: (config, { isServer }) => {
 		if (isServer) {
 			config.externals.push('@libsql/client');

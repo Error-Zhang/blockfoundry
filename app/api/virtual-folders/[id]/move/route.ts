@@ -107,7 +107,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			message: '文件夹移动成功',
 		});
 	} catch (error) {
-		console.error('移动文件夹失败:', error);
-		return NextResponse.json({ success: false, error: '移动文件夹失败' }, { status: 500 });
-	}
+			console.error('移动文件夹失败:', error);
+			const errorMessage = error instanceof Error ? error.message : '移动文件夹失败';
+			return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+		}
 }

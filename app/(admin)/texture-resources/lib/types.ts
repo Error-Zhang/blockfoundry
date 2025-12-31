@@ -15,7 +15,6 @@ export interface TextureResource {
 	height: number;
 	format: string;
 	tags: string[];
-	thumbnailUrl: string;
 	originalUrl: string;
 	createdAt: string;
 	updatedAt: string;

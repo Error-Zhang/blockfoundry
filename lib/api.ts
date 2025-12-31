@@ -25,37 +25,21 @@ export class ApiError extends Error {
  * 基础请求方法
  */
 async function request<T = any>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
-	try {
-		const response = await fetch(url, {
-			...options,
-			headers: {
-				...options?.headers,
-			},
-		});
+	const response = await fetch(url, {
+		...options,
+		headers: {
+			...options?.headers,
+		},
+	});
 
-		// 检查响应的 content-type
-		const contentType = response.headers.get('content-type');
-		if (!contentType || !contentType.includes('application/json')) {
-			const text = await response.text();
-			throw new ApiError(`服务器返回非 JSON 响应: ${text.substring(0, 100)}`, response.status);
-		}
-
-		const result = await response.json();
-
-		if (!response.ok) {
-			throw new ApiError(result.error || '请求失败', response.status, result);
-		}
-
-		return result;
-	} catch (error) {
-		if (error instanceof ApiError) {
-			throw error;
-		}
-		if (error instanceof SyntaxError) {
-			throw new ApiError('服务器返回的数据格式错误');
-		}
-		throw new ApiError(error instanceof Error ? error.message : '网络请求失败');
+	// 检查响应的 content-type
+	const contentType = response.headers.get('content-type');
+	if (!contentType || !contentType.includes('application/json')) {
+		const text = await response.text();
+		throw new ApiError(`服务器返回非 JSON 响应: ${text.substring(0, 100)}`, response.status);
 	}
+
+	return await response.json();
 }
 
 /**
@@ -103,16 +87,12 @@ export async function del<T = any>(url: string): Promise<ApiResponse<T>> {
 /**
  * 上传文件 (FormData)
  */
-export async function upload<T = any>(
-	url: string, 
-	formData: FormData,
-	onProgress?: (progress: number) => void
-): Promise<ApiResponse<T>> {
+export async function upload<T = any>(url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
 	// 如果需要进度回调，使用 XMLHttpRequest
 	if (onProgress) {
 		return new Promise((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
-			
+
 			// 监听上传进度
 			xhr.upload.addEventListener('progress', (event) => {
 				if (event.lengthComputable) {
@@ -120,44 +100,61 @@ export async function upload<T = any>(
 					onProgress(progress);
 				}
 			});
-			
+
 			// 监听完成
 			xhr.addEventListener('load', () => {
 				try {
 					const contentType = xhr.getResponseHeader('content-type');
 					if (!contentType || !contentType.includes('application/json')) {
-						reject(new ApiError(`服务器返回非 JSON 响应`, xhr.status));
+						resolve({
+							success: false,
+							error: '服务器返回非 JSON 响应',
+						});
 						return;
 					}
-					
+
 					const result = JSON.parse(xhr.responseText);
-					
+
+					// 无论状态码如何，都返回结果
 					if (xhr.status >= 200 && xhr.status < 300) {
 						resolve(result);
 					} else {
-						reject(new ApiError(result.error || '请求失败', xhr.status, result));
+						resolve({
+							success: false,
+							error: result.error || '请求失败',
+							...result,
+						});
 					}
 				} catch (error) {
-					reject(new ApiError('解析响应失败'));
+					resolve({
+						success: false,
+						error: '解析响应失败',
+					});
 				}
 			});
-			
+
 			// 监听错误
 			xhr.addEventListener('error', () => {
-				reject(new ApiError('网络请求失败'));
+				resolve({
+					success: false,
+					error: '网络请求失败',
+				});
 			});
-			
+
 			// 监听中断
 			xhr.addEventListener('abort', () => {
-				reject(new ApiError('请求已取消'));
+				resolve({
+					success: false,
+					error: '请求已取消',
+				});
 			});
-			
+
 			// 发送请求
 			xhr.open('POST', url);
 			xhr.send(formData);
 		});
 	}
-	
+
 	// 不需要进度回调时使用 fetch
 	return request<T>(url, {
 		method: 'POST',

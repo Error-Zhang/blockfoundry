@@ -4,6 +4,7 @@ import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { TextureResource } from '../lib/types';
 import styles from '../../../styles/modals.module.scss';
+import { get } from '@/lib/api';
 
 interface EditModalProps {
 	visible: boolean;
@@ -23,6 +24,25 @@ const EditModal: React.FC<EditModalProps> = ({
 	onSubmit,
 }) => {
 	const [fileList, setFileList] = useState<UploadFile[]>([]);
+	const [allTags, setAllTags] = useState<string[]>([]);
+
+	// 加载所有已使用的标签
+	useEffect(() => {
+		const loadTags = async () => {
+			try {
+				const result = await get<string[]>('/api/texture-resources/tags');
+				if (result.success && result.data) {
+					setAllTags(result.data);
+				}
+			} catch (error) {
+				console.error('加载标签失败:', error);
+			}
+		};
+		
+		if (visible) {
+			loadTags();
+		}
+	}, [visible]);
 
 	useEffect(() => {
 		if (!visible) {
@@ -83,7 +103,12 @@ const EditModal: React.FC<EditModalProps> = ({
 				</Form.Item>
 
 				<Form.Item name="tags" label="标签">
-					<Select mode="tags" placeholder="输入标签，按回车添加" className={styles.fullWidth} />
+					<Select 
+						mode="tags" 
+						placeholder="输入标签，按回车添加" 
+						className={styles.fullWidth}
+						options={allTags.map(tag => ({ label: tag, value: tag }))}
+					/>
 				</Form.Item>
 
 				<Form.Item name="isPublic" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
