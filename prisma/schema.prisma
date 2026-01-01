@@ -6,10 +6,6 @@ generator client {
   engineType = "library"
 }
 
-datasource db {
-  provider = "sqlite"
-}
-
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique
@@ -18,8 +14,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  resources Resource[]
-  projects  Project[]
+  resources        Resource[]        @relation("UserResources")
+  textureResources TextureResource[] @relation("UserTextureResources")
+  virtualFolders   VirtualFolder[]   @relation("UserVirtualFolders")
 }
 
 model Resource {
@@ -32,18 +29,7 @@ model Resource {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User? @relation(fields: [userId], references: [id])
-}
-
-model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  userId      Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User? @relation(fields: [userId], references: [id])
+  user User? @relation("UserResources", fields: [userId], references: [id])
 }
 
 // 纹理资源模型
@@ -60,12 +46,16 @@ model TextureResource {
   fileSize    Int
   isPublic    Boolean  @default(true)
   tags        String   @default("") // JSON string array
+  userId      Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   usageCount  Int      @default(0)
 
+  user User @relation("UserTextureResources", fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([filePath])
   @@index([isPublic])
+  @@index([userId])
 }
 
 // 虚拟文件夹模型
@@ -74,11 +64,15 @@ model VirtualFolder {
   name      String
   path      String          @unique // 虚拟路径，如 "textures.blocks.stone"
   parentId  String?
+  userId    Int // 关联用户ID
   parent    VirtualFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children  VirtualFolder[] @relation("FolderHierarchy")
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
+  user User @relation("UserVirtualFolders", fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([path])
   @@index([parentId])
+  @@index([userId])
 }

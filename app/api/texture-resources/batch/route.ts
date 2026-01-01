@@ -5,9 +5,16 @@ import { existsSync } from 'fs';
 import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
 import { TEXTURE_UPLOAD_DIR } from '@/lib/constants';
+import { withAuth } from '@/lib/auth-middleware';
 
 // POST - 批量上传纹理资源
 export async function POST(request: NextRequest) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const formData = await request.formData();
 		const files = formData.getAll('files') as File[];
@@ -33,9 +40,10 @@ export async function POST(request: NextRequest) {
 			conflictChecks.push({ file, name, virtualPath });
 		}
 
-		// 批量检查数据库中是否已存在
+		// 批量检查数据库中是否已存在（在当前用户的资源中）
 		const existingPaths = await prisma.textureResource.findMany({
 			where: {
+				userId: authResult.user.id,
 				filePath: {
 					in: conflictChecks.map((c) => c.virtualPath),
 				},
@@ -89,6 +97,7 @@ export async function POST(request: NextRequest) {
 						isPublic: true,
 						tags: JSON.stringify([]),
 						usageCount: 0,
+						userId: authResult.user.id,
 					},
 				});
 

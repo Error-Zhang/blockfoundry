@@ -3,9 +3,16 @@ import { prisma } from '@/lib/prisma';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { withAuth } from '@/lib/auth-middleware';
 
 // POST - 清空虚拟文件夹
 export async function POST(request: NextRequest) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const body = await request.json();
 		const { folderId } = body;
@@ -14,35 +21,40 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ success: false, error: '缺少必要参数' }, { status: 400 });
 		}
 
-		// 获取文件夹信息
-		const folder = await prisma.virtualFolder.findUnique({
-			where: { id: folderId },
+		// 获取文件夹信息（确保属于当前用户）
+		const folder = await prisma.virtualFolder.findFirst({
+			where: { 
+				id: folderId,
+				userId: authResult.user.id,
+			},
 		});
 
 		if (!folder) {
-			return NextResponse.json({ success: false, error: '文件夹不存在' }, { status: 404 });
+			return NextResponse.json({ success: false, error: '文件夹不存在或无权访问' }, { status: 404 });
 		}
 
-		// 获取所有子文件夹（包括嵌套的）
-		const allSubFolders = await prisma.virtualFolder.findMany({
-			where: {
-				path: {
-					startsWith: `${folder.path}.`,
-				},
+		// 获取所有子文件夹（包括嵌套的，且属于当前用户）
+	const allSubFolders = await prisma.virtualFolder.findMany({
+		where: {
+			userId: authResult.user.id,
+			path: {
+				startsWith: `${folder.path}.`,
 			},
-		});
+		},
+	});
 
-		// 获取文件夹及其所有子文件夹下的所有资源
-		const resources = await prisma.textureResource.findMany({
-			where: {
-				OR: [
-					// 当前文件夹下的资源
-					{ filePath: { startsWith: `${folder.path}.` } },
-					// 精确匹配当前文件夹路径的资源
-					{ filePath: folder.path },
-				],
-			},
-		});
+	// 获取文件夹及其所有子文件夹下的所有资源（属于当前用户）
+	const resources = await prisma.textureResource.findMany({
+		where: {
+			userId: authResult.user.id,
+			OR: [
+				// 当前文件夹下的资源
+				{ filePath: { startsWith: `${folder.path}.` } },
+				// 精确匹配当前文件夹路径的资源
+				{ filePath: folder.path },
+			],
+		},
+	});
 
 		// 收集所有需要删除的物理文件
 		const filesToDelete: string[] = [];
@@ -67,24 +79,26 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
-		// 删除所有资源记录
-		await prisma.textureResource.deleteMany({
-			where: {
-				OR: [
-					{ filePath: { startsWith: `${folder.path}.` } },
-					{ filePath: folder.path },
-				],
-			},
-		});
+		// 删除所有资源记录（只删除当前用户的）
+	await prisma.textureResource.deleteMany({
+		where: {
+			userId: authResult.user.id,
+			OR: [
+				{ filePath: { startsWith: `${folder.path}.` } },
+				{ filePath: folder.path },
+			],
+		},
+	});
 
-		// 删除所有子文件夹
-		await prisma.virtualFolder.deleteMany({
-			where: {
-				path: {
-					startsWith: `${folder.path}.`,
-				},
+	// 删除所有子文件夹（只删除当前用户的）
+	await prisma.virtualFolder.deleteMany({
+		where: {
+			userId: authResult.user.id,
+			path: {
+				startsWith: `${folder.path}.`,
 			},
-		});
+		},
+	});
 
 		// 删除物理文件
 		let deletedFilesCount = 0;

@@ -1,20 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/auth-middleware';
 
 // GET - 获取虚拟文件夹列表
 export async function GET(request: NextRequest) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const { searchParams } = new URL(request.url);
 		const parentPath = searchParams.get('parentPath') || '';
 
+		// 检查是否存在根节点，如果不存在则自动创建
+		const rootFolder = await prisma.virtualFolder.findFirst({
+			where: {
+				userId: authResult.user.id,
+				path: 'root',
+				parentId: null,
+			},
+		});
+
+		if (!rootFolder) {
+			// 创建根节点
+			await prisma.virtualFolder.create({
+				data: {
+					name: 'root',
+					path: 'root',
+					parentId: null,
+					userId: authResult.user.id,
+				},
+			});
+		}
+
 		const folders = await prisma.virtualFolder.findMany({
-			where: parentPath
-				? {
-						path: {
-							startsWith: parentPath,
-						},
-					}
-				: {},
+			where: {
+				userId: authResult.user.id,
+				...(parentPath
+					? {
+							path: {
+								startsWith: parentPath,
+							},
+						}
+					: {}),
+			},
 			orderBy: {
 				path: 'asc',
 			},
@@ -32,6 +63,12 @@ export async function GET(request: NextRequest) {
 
 // POST - 创建虚拟文件夹
 export async function POST(request: NextRequest) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const body = await request.json();
 		const { name, parentPath } = body;
@@ -43,9 +80,12 @@ export async function POST(request: NextRequest) {
 		// 构建完整路径
 		const path = parentPath ? `${parentPath}.${name}` : name;
 
-		// 检查路径是否已存在
-		const existing = await prisma.virtualFolder.findUnique({
-			where: { path },
+		// 检查路径是否已存在（在当前用户的文件夹中）
+		const existing = await prisma.virtualFolder.findFirst({
+			where: {
+				path,
+				userId: authResult.user.id,
+			},
 		});
 
 		if (existing) {
@@ -55,8 +95,11 @@ export async function POST(request: NextRequest) {
 		// 查找父文件夹
 		let parentId = null;
 		if (parentPath) {
-			const parent = await prisma.virtualFolder.findUnique({
-				where: { path: parentPath },
+			const parent = await prisma.virtualFolder.findFirst({
+				where: {
+					path: parentPath,
+					userId: authResult.user.id,
+				},
 			});
 			parentId = parent?.id || null;
 		}
@@ -67,6 +110,7 @@ export async function POST(request: NextRequest) {
 				name,
 				path,
 				parentId,
+				userId: authResult.user.id,
 			},
 		});
 

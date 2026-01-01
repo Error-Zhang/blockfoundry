@@ -1,0 +1,135 @@
+.fileTreeWrapper {
+  position: relative;
+
+  .fileTreeCard {
+    height: 100%;
+
+    :global {
+      .ant-card-body {
+        padding: 16px;
+        height: calc(100% - 57px);
+        overflow-y: auto;
+      }
+
+      .ant-tree {
+        .ant-tree-node-content-wrapper {
+          display: flex;
+          padding-inline: unset;
+
+          &:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+          }
+
+          &.ant-tree-node-selected {
+            background-color: rgba(0, 0, 0, 0.1);
+          }
+        }
+
+        .ant-tree-switcher {
+          color: rgba(0, 0, 0, 0.45);
+        }
+
+        // 隐藏拖拽图标
+        .ant-tree-draggable-icon {
+          display: none !important;
+        }
+
+        // 拖拽时的样式
+        .ant-tree-treenode {
+          // 隐藏上下边界线
+          &.drag-over-gap-top,
+          &.drag-over-gap-bottom {
+            ::before,
+            &::after {
+              display: none !important;
+            }
+          }
+
+          &.drag-over {
+            // 拖拽到节点内部时,放大并高亮
+            > .ant-tree-node-content-wrapper {
+              background-color: rgba(24, 144, 255, 0.1) !important;
+              border: 2px dashed #1890ff;
+              border-radius: 4px;
+              transform: scale(1.1);
+              transition: all 0.2s ease;
+            }
+          }
+        }
+      }
+    }
+
+    .treeNodeTitle {
+      cursor: context-menu;
+      padding: 2px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+
+  // 拖拽手柄样式
+  .resizeHandle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: transparent;
+    cursor: col-resize;
+    z-index: 10;
+    transition: background-color 0.2s;
+
+    // 添加一个更明显的拖拽区域
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -2px;
+      right: -2px;
+      bottom: 0;
+      background: transparent;
+    }
+  }
+
+  // 拖拽时的全局样式
+  &.resizing {
+    .resizeHandle {
+      background-color: #000000;
+    }
+  }
+}
+
+.contextMenu {
+  position: fixed;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 150px;
+
+  :global {
+    .ant-menu {
+      border: none;
+      box-shadow: none;
+
+      .ant-menu-item {
+        margin: 0;
+        padding: 8px 16px;
+        line-height: 1.5;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.04);
+        }
+      }
+
+      .ant-menu-item-divider {
+        margin: 4px 0;
+      }
+    }
+  }
+}

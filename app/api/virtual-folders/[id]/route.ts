@@ -1,32 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/auth-middleware';
 
 // DELETE - 删除虚拟文件夹
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const { id } = await params;
 
-		// 检查文件夹是否存在
-	const folder = await prisma.virtualFolder.findUnique({
-		where: { id },
+		// 检查文件夹是否存在且属于当前用户
+	const folder = await prisma.virtualFolder.findFirst({
+		where: { 
+			id,
+			userId: authResult.user.id,
+		},
 	});
 
 	if (!folder) {
-		return NextResponse.json({ success: false, error: '文件夹不存在' }, { status: 404 });
+		return NextResponse.json({ success: false, error: '文件夹不存在或无权访问' }, { status: 404 });
 	}
 
-	// 获取所有子文件夹（包括嵌套的）
+	// 获取所有子文件夹（包括嵌套的，且属于当前用户）
 	const allSubFolders = await prisma.virtualFolder.findMany({
 		where: {
+			userId: authResult.user.id,
 			path: {
 				startsWith: `${folder.path}.`,
 			},
 		},
 	});
 
-	// 获取文件夹及其所有子文件夹下的所有资源
+	// 获取文件夹及其所有子文件夹下的所有资源（属于当前用户）
 	const resources = await prisma.textureResource.findMany({
 		where: {
+			userId: authResult.user.id,
 			OR: [
 				// 当前文件夹下的资源
 				{ filePath: { startsWith: `${folder.path}.` } },
@@ -59,9 +71,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 		}
 	}
 
-	// 删除所有资源记录
+	// 删除所有资源记录（只删除当前用户的）
 	await prisma.textureResource.deleteMany({
 		where: {
+			userId: authResult.user.id,
 			OR: [
 				{ filePath: { startsWith: `${folder.path}.` } },
 				{ filePath: folder.path },
@@ -69,9 +82,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 		},
 	});
 
-	// 删除所有子文件夹
+	// 删除所有子文件夹（只删除当前用户的）
 	await prisma.virtualFolder.deleteMany({
 		where: {
+			userId: authResult.user.id,
 			path: {
 				startsWith: `${folder.path}.`,
 			},
@@ -123,18 +137,27 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
 // PUT - 更新虚拟文件夹（重命名或移动）
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const { id } = await params;
 		const body = await request.json();
 		const { name, path: newPath } = body;
 
-		// 获取当前文件夹
-		const folder = await prisma.virtualFolder.findUnique({
-			where: { id },
+		// 获取当前文件夹（确保属于当前用户）
+		const folder = await prisma.virtualFolder.findFirst({
+			where: { 
+				id,
+				userId: authResult.user.id,
+			},
 		});
 
 		if (!folder) {
-			return NextResponse.json({ success: false, error: '文件夹不存在' }, { status: 404 });
+			return NextResponse.json({ success: false, error: '文件夹不存在或无权访问' }, { status: 404 });
 		}
 
 		const oldPath = folder.path;
@@ -164,9 +187,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 			});
 		}
 
-		// 检查新路径是否已存在
-		const existing = await prisma.virtualFolder.findUnique({
-			where: { path: finalPath },
+		// 检查新路径是否已存在（在当前用户的文件夹中）
+		const existing = await prisma.virtualFolder.findFirst({
+			where: { 
+				path: finalPath,
+				userId: authResult.user.id,
+			},
 		});
 
 		if (existing && existing.id !== id) {
@@ -182,9 +208,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 			},
 		});
 
-		// 更新所有子文件夹和资源的路径
+		// 更新所有子文件夹和资源的路径（只更新当前用户的）
 		const children = await prisma.virtualFolder.findMany({
 			where: {
+				userId: authResult.user.id,
 				path: {
 					startsWith: `${oldPath}.`,
 				},
@@ -201,6 +228,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 		const resources = await prisma.textureResource.findMany({
 			where: {
+				userId: authResult.user.id,
 				filePath: {
 					startsWith: `${oldPath}.`,
 				},

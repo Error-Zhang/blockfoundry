@@ -2,7 +2,7 @@
  * 纹理资源 API 服务
  */
 
-import { get, put, del, upload, createFormData, ApiResponse } from '@/lib/api';
+import { ApiResponse, createFormData, del, get, put, upload } from '@/lib/api';
 import type { TextureResource } from '../lib/types';
 
 /**
@@ -31,7 +31,7 @@ export interface CreateTextureResourceParams {
 	folderPath?: string;
 }
 
-export async function createTextureResource(params: CreateTextureResourceParams): Promise<ApiResponse<TextureResource>> {
+export async function createTextureResource(params: CreateTextureResourceParams | any): Promise<ApiResponse<TextureResource>> {
 	const formData = createFormData()
 		.appendFile('file', params.file)
 		.append('name', params.name)
@@ -47,16 +47,8 @@ export async function createTextureResource(params: CreateTextureResourceParams)
 /**
  * 更新纹理资源
  */
-export interface UpdateTextureResourceParams {
-	name?: string;
-	description?: string;
-	tags?: string[];
-	isPublic?: boolean;
-	filePath?: string;
-}
-
-export async function updateTextureResource(id: string, params: UpdateTextureResourceParams): Promise<ApiResponse<TextureResource>> {
-	return put<TextureResource>(`/api/texture-resources/${id}`, params);
+export async function updateTextureResource(id: string, data: Partial<TextureResource>): Promise<ApiResponse<TextureResource>> {
+	return put<TextureResource>(`/api/texture-resources/${id}`, data);
 }
 
 /**
@@ -70,11 +62,38 @@ export async function deleteTextureResource(id: string): Promise<ApiResponse<voi
  * 批量上传纹理资源
  */
 export async function batchUploadTextureResources(
-	files: File[], 
+	files: File[],
 	folderPath?: string,
 	onProgress?: (progress: number) => void
 ): Promise<ApiResponse<TextureResource[]>> {
-	const formData = createFormData().appendFiles('files', files).append('folderPath', folderPath || '').build();
+	const formData = createFormData()
+		.appendFiles('files', files)
+		.append('folderPath', folderPath || '')
+		.build();
 
 	return upload<TextureResource[]>('/api/texture-resources/batch', formData, onProgress);
+}
+
+/**
+ * 获取所有标签
+ */
+export async function getTags() {
+	return await get<string[]>('/api/texture-resources/tags');
+}
+
+/**
+ * 复制纹理资源
+ */
+export async function copyTextureResource(id: string, newFilePath: string): Promise<ApiResponse<TextureResource>> {
+	const response = await fetch('/api/texture-resources', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			action: 'copy',
+			sourceId: id,
+			filePath: newFilePath,
+		}),
+	});
+
+	return response.json();
 }

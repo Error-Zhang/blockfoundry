@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import type { UploadFile } from 'antd';
 import { Button, Form, Input, Modal, Select, Space, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
 import { TextureResource } from '../lib/types';
 import styles from '../../../styles/modals.module.scss';
-import { get } from '@/lib/api';
+import { getTags } from '@/app/(admin)/texture-resources/services/textureResourceService';
 
 interface EditModalProps {
 	visible: boolean;
@@ -15,32 +15,16 @@ interface EditModalProps {
 	onSubmit: (values: any) => void;
 }
 
-const EditModal: React.FC<EditModalProps> = ({
-	visible,
-	editingResource,
-	form,
-	loading,
-	onCancel,
-	onSubmit,
-}) => {
+const EditModal: React.FC<EditModalProps> = ({ visible, editingResource, form, loading, onCancel, onSubmit }) => {
 	const [fileList, setFileList] = useState<UploadFile[]>([]);
 	const [allTags, setAllTags] = useState<string[]>([]);
 
 	// 加载所有已使用的标签
 	useEffect(() => {
-		const loadTags = async () => {
-			try {
-				const result = await get<string[]>('/api/texture-resources/tags');
-				if (result.success && result.data) {
-					setAllTags(result.data);
-				}
-			} catch (error) {
-				console.error('加载标签失败:', error);
-			}
-		};
-		
 		if (visible) {
-			loadTags();
+			getTags().then((result) => {
+				setAllTags(result.data!);
+			});
 		}
 	}, [visible]);
 
@@ -55,7 +39,7 @@ const EditModal: React.FC<EditModalProps> = ({
 
 	const handleFileChange = ({ fileList: newFileList }: { fileList: UploadFile[] }) => {
 		setFileList(newFileList);
-		
+
 		// 自动填充纹理名称
 		if (newFileList.length > 0 && !editingResource) {
 			const file = newFileList[0];
@@ -103,11 +87,11 @@ const EditModal: React.FC<EditModalProps> = ({
 				</Form.Item>
 
 				<Form.Item name="tags" label="标签">
-					<Select 
-						mode="tags" 
-						placeholder="输入标签，按回车添加" 
+					<Select
+						mode="tags"
+						placeholder="输入标签，按回车添加"
 						className={styles.fullWidth}
-						options={allTags.map(tag => ({ label: tag, value: tag }))}
+						options={allTags.map((tag) => ({ label: tag, value: tag }))}
 					/>
 				</Form.Item>
 

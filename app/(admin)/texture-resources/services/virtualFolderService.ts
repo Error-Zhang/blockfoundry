@@ -2,7 +2,7 @@
  * 虚拟文件夹 API 服务
  */
 
-import { get, post, put, del, ApiResponse } from '@/lib/api';
+import { ApiResponse, del, get, post, put } from '@/lib/api';
 
 export interface VirtualFolder {
 	id: string;
@@ -23,13 +23,8 @@ export async function getVirtualFolders(parentPath?: string): Promise<ApiRespons
 /**
  * 创建虚拟文件夹
  */
-export interface CreateVirtualFolderParams {
-	name: string;
-	parentPath?: string;
-}
-
-export async function createVirtualFolder(params: CreateVirtualFolderParams): Promise<ApiResponse<VirtualFolder>> {
-	return post<VirtualFolder>('/api/virtual-folders', params);
+export async function createVirtualFolder(name: string, parentId: string): Promise<ApiResponse<VirtualFolder>> {
+	return post<VirtualFolder>('/api/virtual-folders', { name, parentPath: parentId });
 }
 
 /**
@@ -61,6 +56,41 @@ export async function updateVirtualFolder(id: string, params: UpdateVirtualFolde
 /**
  * 移动虚拟文件夹到新路径
  */
-export async function moveVirtualFolder(id: string, newPath: string): Promise<ApiResponse<VirtualFolder>> {
-	return post<VirtualFolder>(`/api/virtual-folders/${id}/move`, { newPath });
+export async function moveVirtualFolder(id: string, targetParentId: string): Promise<ApiResponse<VirtualFolder>> {
+	return post<VirtualFolder>(`/api/virtual-folders/${id}/move`, { newPath: targetParentId });
+}
+
+/**
+ * 复制虚拟文件夹
+ */
+export async function copyVirtualFolder(id: string, targetParentId: string): Promise<ApiResponse<VirtualFolder>> {
+	return post<VirtualFolder>('/api/virtual-folders/copy', { 
+		folderId: id, 
+		newName: '', 
+		targetParentId: targetParentId || null 
+	});
+}
+
+/**
+ * 下载虚拟文件夹
+ */
+export async function downloadVirtualFolder(folderId: string): Promise<Blob> {
+	const response = await fetch('/api/virtual-folders/download', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ folderId }),
+	});
+
+	if (!response.ok) {
+		throw new Error('下载失败');
+	}
+
+	return response.blob();
+}
+
+/**
+ * 清空虚拟文件夹
+ */
+export async function clearVirtualFolder(id: string): Promise<ApiResponse<void>> {
+	return post<void>('/api/virtual-folders/clear', { folderId: id });
 }

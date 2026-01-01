@@ -1,6 +1,15 @@
 import React from 'react';
 import { Button, Card, Image, Input, Popconfirm, Space, Table, Tag } from 'antd';
-import { DeleteOutlined, DownloadOutlined, EditOutlined, EyeOutlined, ExpandOutlined, SearchOutlined, ShrinkOutlined, UploadOutlined } from '@ant-design/icons';
+import {
+	DeleteOutlined,
+	DownloadOutlined,
+	EditOutlined,
+	ExpandOutlined,
+	EyeOutlined,
+	SearchOutlined,
+	ShrinkOutlined,
+	UploadOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { TextureResource } from '../lib/types';
 import styles from '../../../styles/resourceTable.module.scss';
@@ -16,8 +25,6 @@ interface ResourceTableProps {
 	onDownload: (resource: TextureResource) => void;
 	onUpload: () => void;
 	onBatchUpload: () => void;
-	onCreateNew: () => void;
-	onBundleManage: (resource: TextureResource) => void;
 	isExpanded?: boolean;
 	onExpandToggle?: () => void;
 	highlightedResourceId?: string | null;
@@ -34,8 +41,6 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 	onDownload,
 	onUpload,
 	onBatchUpload,
-	onCreateNew,
-	onBundleManage,
 	isExpanded = false,
 	onExpandToggle,
 	highlightedResourceId,
@@ -64,7 +69,7 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			key: 'name',
 			width: 160,
 			render: (text: string, record: TextureResource) => {
-				// 转换为Windows路径格式并添加扩展名
+				// 转换为路径格式并添加扩展名
 				const getFileExtension = (fileName: string) => {
 					const match = fileName.match(/\.[^.]+$/);
 					return match ? match[0] : '';
@@ -151,24 +156,24 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 	];
 
 	return (
-			<Card
-				title={
-					<Space.Compact style={{ width: '100%' }}>
-						<Button
-							icon={isExpanded ? <ShrinkOutlined /> : <ExpandOutlined />}
-							onClick={onExpandToggle}
-							title={isExpanded ? '收起' : '展开'}
-						/>
-						<Input
-							className={styles.search}
-							placeholder="搜索纹理名称或标签..."
-							prefix={<SearchOutlined />}
-							value={searchText}
-							onChange={(e) => onSearchChange(e.target.value)}
-							allowClear
-						/>
-					</Space.Compact>
-				}
+		<Card
+			title={
+				<Space.Compact style={{ width: '100%' }}>
+					<Button
+						icon={isExpanded ? <ShrinkOutlined /> : <ExpandOutlined />}
+						onClick={onExpandToggle}
+						title={isExpanded ? '收起' : '展开'}
+					/>
+					<Input
+						className={styles.search}
+						placeholder="搜索纹理名称或标签..."
+						prefix={<SearchOutlined />}
+						value={searchText}
+						onChange={(e) => onSearchChange(e.target.value)}
+						allowClear
+					/>
+				</Space.Compact>
+			}
 			className={styles.resourceTableCard}
 			extra={
 				<Space>
@@ -182,24 +187,22 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			}
 		>
 			<div>
-					<Table
-							columns={columns}
-							dataSource={resources}
-							rowKey="id"
-							loading={loading}
-							scroll={{ x: 1200 }}
-							pagination={{
-								defaultPageSize: 10,
-								pageSizeOptions: ['10', '20', '50', '100'],
-								showSizeChanger: true,
-								showQuickJumper: true,
-								showTotal: (total) => `共 ${total} 个纹理资源`,
-							}}
-							rowClassName={(record) => 
-								record.id === highlightedResourceId ? styles.highlightedRow : ''
-							}
-						/>
-				</div>
+				<Table
+					columns={columns}
+					dataSource={resources}
+					rowKey="id"
+					loading={loading}
+					scroll={{ x: 1200 }}
+					pagination={{
+						defaultPageSize: 10,
+						pageSizeOptions: ['10', '20', '50', '100'],
+						showSizeChanger: true,
+						showQuickJumper: true,
+						showTotal: (total) => `共 ${total} 个纹理资源`,
+					}}
+					rowClassName={(record) => (record.id === highlightedResourceId ? styles.highlightedRow : '')}
+				/>
+			</div>
 		</Card>
 	);
 };

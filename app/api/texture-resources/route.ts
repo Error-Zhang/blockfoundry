@@ -5,25 +5,35 @@ import { existsSync } from 'fs';
 import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
 import { TEXTURE_UPLOAD_DIR } from '@/lib/constants';
+import { withAuth } from '@/lib/auth-middleware';
 
 // GET - 获取所有纹理资源
 export async function GET(request: NextRequest) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const { searchParams } = new URL(request.url);
 		const folderPath = searchParams.get('folderPath') || '';
 
-		// 从数据库获取纹理资源列表
+		// 从数据库获取纹理资源列表（只获取当前用户的资源）
 		const resources = await prisma.textureResource.findMany({
-			where: folderPath
-				? {
-						OR: [
-							// 精确匹配文件夹路径
-							{ filePath: folderPath },
-							// 匹配子文件（必须以 folderPath. 开头）
-							{ filePath: { startsWith: `${folderPath}.` } },
-						],
-					}
-				: {},
+			where: {
+				userId: authResult.user.id,
+				...(folderPath
+					? {
+							OR: [
+								// 精确匹配文件夹路径
+								{ filePath: folderPath },
+								// 匹配子文件（必须以 folderPath. 开头）
+								{ filePath: { startsWith: `${folderPath}.` } },
+							],
+						}
+					: {}),
+			},
 			orderBy: {
 				createdAt: 'desc',
 			},
@@ -50,6 +60,12 @@ export async function GET(request: NextRequest) {
 
 // POST - 创建单个纹理资源或复制资源
 export async function POST(request: NextRequest) {
+	// 认证检查
+	const authResult = await withAuth();
+	if (!authResult.authenticated) {
+		return authResult.response;
+	}
+
 	try {
 		const contentType = request.headers.get('content-type');
 
@@ -59,18 +75,24 @@ export async function POST(request: NextRequest) {
 			const { action, sourceId, filePath } = body;
 
 			if (action === 'copy' && sourceId && filePath) {
-				// 查找源资源
-				const sourceResource = await prisma.textureResource.findUnique({
-					where: { id: sourceId },
+				// 查找源资源（确保是当前用户的资源）
+				const sourceResource = await prisma.textureResource.findFirst({
+					where: { 
+						id: sourceId,
+						userId: authResult.user.id,
+					},
 				});
 
 				if (!sourceResource) {
-					return NextResponse.json({ success: false, error: '源文件不存在' }, { status: 404 });
+					return NextResponse.json({ success: false, error: '源文件不存在或无权访问' }, { status: 404 });
 				}
 
-				// 检查目标路径是否已存在
-				const existingResource = await prisma.textureResource.findUnique({
-					where: { filePath },
+				// 检查目标路径是否已存在（在当前用户的资源中）
+				const existingResource = await prisma.textureResource.findFirst({
+					where: { 
+						filePath,
+						userId: authResult.user.id,
+					},
 				});
 
 				if (existingResource) {
@@ -95,6 +117,7 @@ export async function POST(request: NextRequest) {
 						isPublic: sourceResource.isPublic,
 						tags: sourceResource.tags,
 						usageCount: 0,
+						userId: authResult.user.id,
 					},
 				});
 
@@ -150,9 +173,12 @@ export async function POST(request: NextRequest) {
 		// 构建虚拟路径
 		const virtualPath = folderPath ? `${folderPath}.${name}` : name;
 
-		// 检查是否已存在相同路径的资源
-		const existingResource = await prisma.textureResource.findUnique({
-			where: { filePath: virtualPath },
+		// 检查是否已存在相同路径的资源（在当前用户的资源中）
+		const existingResource = await prisma.textureResource.findFirst({
+			where: { 
+				filePath: virtualPath,
+				userId: authResult.user.id,
+			},
 		});
 
 		if (existingResource) {
@@ -173,9 +199,12 @@ export async function POST(request: NextRequest) {
 			for (const part of pathParts) {
 				const newPath = currentPath ? `${currentPath}.${part}` : part;
 
-				// 检查虚拟文件夹是否存在
-				const existingFolder = await prisma.virtualFolder.findUnique({
-					where: { path: newPath },
+				// 检查虚拟文件夹是否存在（在当前用户的文件夹中）
+				const existingFolder = await prisma.virtualFolder.findFirst({
+					where: { 
+						path: newPath,
+						userId: authResult.user.id,
+					},
 				});
 
 				// 如果不存在，创建虚拟文件夹
@@ -183,8 +212,11 @@ export async function POST(request: NextRequest) {
 					// 查找父文件夹的 ID
 					let parentId: string | null = null;
 					if (currentPath) {
-						const parentFolder = await prisma.virtualFolder.findUnique({
-							where: { path: currentPath },
+						const parentFolder = await prisma.virtualFolder.findFirst({
+							where: { 
+								path: currentPath,
+								userId: authResult.user.id,
+							},
 						});
 						parentId = parentFolder?.id || null;
 					}
@@ -194,6 +226,7 @@ export async function POST(request: NextRequest) {
 							name: part,
 							path: newPath,
 							parentId,
+							userId: authResult.user.id,
 						},
 					});
 				}
@@ -217,6 +250,7 @@ export async function POST(request: NextRequest) {
 				isPublic,
 				tags: JSON.stringify(tags ? tags.split(',') : []),
 				usageCount: 0,
+				userId: authResult.user.id,
 			},
 		});
 

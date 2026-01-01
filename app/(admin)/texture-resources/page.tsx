@@ -11,18 +11,18 @@ import BatchUploadModal from './components/BatchUploadModal';
 import { TextureResource } from './lib/types';
 import { downloadTextureResource } from './lib/utils';
 import {
-	getTextureResources,
 	createTextureResource,
-	updateTextureResource,
 	deleteTextureResource,
+	getTextureResources,
+	updateTextureResource
 } from './services/textureResourceService';
 import styles from '../../styles/textureResourceManagement.module.scss';
 import { CloudUploadOutlined, FileImageOutlined, FolderOutlined, TagsOutlined } from '@ant-design/icons';
+import { useAsyncAction } from '@/app/hooks/useAsyncAction';
 
 export default function TextureResourceManagementPage() {
 	const { message } = App.useApp();
 	const [resources, setResources] = useState<TextureResource[]>([]);
-	const [loading, setLoading] = useState(false);
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editingResource, setEditingResource] = useState<TextureResource | null>(null);
 	const [previewVisible, setPreviewVisible] = useState(false);
@@ -49,26 +49,15 @@ export default function TextureResourceManagementPage() {
 	const [form] = Form.useForm();
 
 	// 加载纹理资源
-	const loadResources = async () => {
-		setLoading(true);
-		try {
-			const result = await getTextureResources(currentFolderPath);
-			if (result.success && result.data) {
-				setResources(result.data);
-			} else {
-				message.error(result.error || '加载纹理资源失败');
-			}
-		} catch (error) {
-			console.error('加载纹理资源失败:', error);
-			message.error('加载纹理资源失败');
-		} finally {
-			setLoading(false);
-		}
-	};
+	const { loading, handle: loadResources } = useAsyncAction(getTextureResources, {
+		onSuccess: (_, data) => {
+			setResources(data!);
+		},
+	});
 
 	// 初始化和文件夹切换时加载数据
 	useEffect(() => {
-		loadResources();
+		loadResources(currentFolderPath);
 	}, [currentFolderPath]);
 
 	// 计算标签数量
@@ -84,10 +73,10 @@ export default function TextureResourceManagementPage() {
 
 	// 过滤资源
 	const filteredResources = resources.filter((resource) => {
-		const matchSearch =
+		return (
 			resource.name.toLowerCase().includes(searchText.toLowerCase()) ||
-			resource.tags.some((tag) => tag.toLowerCase().includes(searchText.toLowerCase()));
-		return matchSearch;
+			resource.tags.some((tag) => tag.toLowerCase().includes(searchText.toLowerCase()))
+		);
 	});
 
 	// 处理上传
@@ -98,51 +87,37 @@ export default function TextureResourceManagementPage() {
 	};
 
 	// 处理新建/编辑
+	const { loading: modelLoadingUpdate, handle: handleEditResource } = useAsyncAction(updateTextureResource, {
+		onSuccess: () => loadResources(),
+	});
+	const { loading: modelLoadingCreate, handle: handleCreateResource } = useAsyncAction(createTextureResource, {
+		onSuccess: () => loadResources(),
+	});
+
+	// 共享Loading
+	const modelLoading = modelLoadingUpdate || modelLoadingCreate;
+
 	const handleSubmit = async (values: any) => {
-		setLoading(true);
-		try {
-			if (editingResource) {
-				// 更新资源
-				const result = await updateTextureResource(editingResource.id, values);
-				if (result.success) {
-					message.success('纹理资源更新成功！');
-					loadResources();
-				} else {
-					message.error(result.error || '更新失败');
-				}
-			} else {
-				// 创建新资源
-				const fileList = values.file?.fileList || [];
-				if (fileList.length === 0 || !fileList[0].originFileObj) {
-					message.error('请选择文件');
-					return;
-				}
-
-				const result = await createTextureResource({
-					file: fileList[0].originFileObj,
-					name: values.name,
-					description: values.description,
-					tags: values.tags,
-					isPublic: values.isPublic,
-					folderPath: currentFolderPath,
-				});
-
-				if (result.success) {
-					message.success('纹理资源创建成功！');
-					loadResources();
-				} else {
-					message.error(result.error || '创建失败');
-				}
+		if (editingResource) {
+			// 更新资源
+			await handleEditResource(editingResource.id, values);
+		} else {
+			// 创建新资源
+			const fileList = values.file?.fileList || [];
+			if (!fileList.length) {
+				message.error('请选择文件');
+				return;
 			}
-			setModalVisible(false);
-			setEditingResource(null);
-			form.resetFields();
-		} catch (error) {
-			console.error('操作失败:', error);
-			message.error('操作失败，请重试');
-		} finally {
-			setLoading(false);
+
+			await handleCreateResource({
+				...values,
+				file: fileList[0].originFileObj,
+				folderPath: currentFolderPath,
+			});
 		}
+		setModalVisible(false);
+		setEditingResource(null);
+		form.resetFields();
 	};
 
 	// 处理编辑
@@ -153,20 +128,9 @@ export default function TextureResourceManagementPage() {
 	};
 
 	// 处理删除
-	const handleDelete = async (id: string) => {
-		try {
-			const result = await deleteTextureResource(id);
-			if (result.success) {
-				message.success('纹理资源删除成功！');
-				loadResources();
-			} else {
-				message.error(result.error || '删除失败');
-			}
-		} catch (error) {
-			console.error('删除失败:', error);
-			message.error('删除失败，请重试');
-		}
-	};
+	const { handle: handleDelete } = useAsyncAction(deleteTextureResource, {
+		onSuccess: () => loadResources(),
+	});
 
 	// 处理预览
 	const handlePreview = (resource: TextureResource) => {
@@ -176,13 +140,8 @@ export default function TextureResourceManagementPage() {
 
 	// 处理下载
 	const handleDownload = (resource: TextureResource) => {
-		try {
-			downloadTextureResource(resource);
-			message.success('开始下载文件');
-		} catch (error) {
-			console.error('下载文件失败:', error);
-			message.error('下载文件失败');
-		}
+		downloadTextureResource(resource);
+		message.success('开始下载文件');
 	};
 
 	// 处理批量上传
@@ -196,16 +155,11 @@ export default function TextureResourceManagementPage() {
 			if (!errors || errors.length === 0) {
 				message.success(`成功上传 ${uploadedResources.length} 个纹理资源！`);
 				setBatchUploadVisible(false);
+				loadResources();
 			}
-			// 无论成功还是部分失败，都刷新资源列表
-			loadResources();
 		} catch (error) {
 			message.error('批量上传失败，请重试');
 		}
-	};
-
-	const handleBundleManage = (resource: TextureResource) => {
-		// 暂时不需要
 	};
 
 	// 处理侧边栏宽度变化
@@ -252,47 +206,41 @@ export default function TextureResourceManagementPage() {
 
 			{/* 主要内容区域 */}
 			<div className={styles.mainContentArea}>
-						<div className={`${styles.directoryTree} ${isExpanded ? styles.hidden : styles.visible}`}>
-								<DirectoryTree
-									resources={resources}
-									onResourcesChange={setResources}
-									onResourceSelect={(resource) => {
-										if (resource) {
-											setHighlightedResourceId(resource.id);
-											// 3秒后清除高亮
-											setTimeout(() => setHighlightedResourceId(null), 3000);
-										}
-									}}
-									onFolderSelect={setCurrentFolderPath}
-									onFolderCreated={loadResources}
-									onFolderCountChange={setFolderCount}
-									width={sidebarWidth}
-									onWidthChange={handleSidebarWidthChange}
-								/>
-							</div>
+				<div className={`${styles.directoryTree} ${isExpanded ? styles.hidden : styles.visible}`}>
+					<DirectoryTree
+						resources={resources}
+						onResourcesChange={setResources}
+						onResourceSelect={(resource) => {
+							if (resource) {
+								setHighlightedResourceId(resource.id);
+								// 3秒后清除高亮
+								setTimeout(() => setHighlightedResourceId(null), 3000);
+							}
+						}}
+						onFolderSelect={setCurrentFolderPath}
+						onFolderCreated={() => loadResources(currentFolderPath)}
+						onFolderCountChange={setFolderCount}
+						width={sidebarWidth}
+						onWidthChange={handleSidebarWidthChange}
+					/>
+				</div>
 				<div className={styles.tableContainer}>
-						<ResourceTable
-								resources={filteredResources}
-								loading={loading}
-								searchText={searchText}
-								onSearchChange={setSearchText}
-								onPreview={handlePreview}
-								onEdit={handleEdit}
-								onDelete={handleDelete}
-								onDownload={handleDownload}
-								onUpload={handleUpload}
-								onBatchUpload={handleBatchUploadOpen}
-								onCreateNew={() => {
-									setEditingResource(null);
-									form.resetFields();
-									setModalVisible(true);
-								}}
-								onBundleManage={handleBundleManage}
-								isExpanded={isExpanded}
-								onExpandToggle={() => setIsExpanded(!isExpanded)}
-								highlightedResourceId={highlightedResourceId}
-							/>
-					</div>
+					<ResourceTable
+						resources={filteredResources}
+						loading={loading}
+						searchText={searchText}
+						onSearchChange={setSearchText}
+						onPreview={handlePreview}
+						onEdit={handleEdit}
+						onDelete={handleDelete}
+						onDownload={handleDownload}
+						onUpload={handleUpload}
+						onBatchUpload={handleBatchUploadOpen}
+						isExpanded={isExpanded}
+						onExpandToggle={() => setIsExpanded(!isExpanded)}
+						highlightedResourceId={highlightedResourceId}
+					/>
+				</div>
 			</div>
 
 			{/* 模态框 */}
@@ -300,7 +248,7 @@ export default function TextureResourceManagementPage() {
 				visible={modalVisible}
 				editingResource={editingResource}
 				form={form}
-				loading={loading}
+				loading={modelLoading}
 				onCancel={() => {
 					setModalVisible(false);
 					setEditingResource(null);
@@ -309,11 +257,7 @@ export default function TextureResourceManagementPage() {
 				onSubmit={handleSubmit}
 			/>
 
-			<PreviewModal
-				visible={previewVisible}
-				resource={previewResource}
-				onCancel={() => setPreviewVisible(false)}
-			/>
+			<PreviewModal visible={previewVisible} resource={previewResource} onCancel={() => setPreviewVisible(false)} />
 
 			<BatchUploadModal
 				visible={batchUploadVisible}

@@ -1,4 +1,4 @@
-.loginContainer {
+.authContainer {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -29,7 +29,7 @@
   }
 }
 
-.loginBox {
+.authBox {
   position: relative;
   z-index: 1;
   width: 100%;
@@ -37,7 +37,7 @@
   padding: 20px;
 }
 
-.loginCard {
+.authCard {
   border-radius: $border-radius-xl;
   box-shadow: $shadow-base;
   backdrop-filter: blur(10px);
@@ -54,13 +54,13 @@
 
 .logoSection {
   text-align: center;
-  margin-bottom: $spacing-xxl;
+  margin-bottom: $spacing-md;
 }
 
 .logo {
   width: 80px;
   height: 80px;
-  margin: 0 auto 20px;
+  margin: 0 auto $spacing-md;
   background: linear-gradient(135deg, $color-primary, $color-primary-hover);
   border-radius: $border-radius-xxl;
   display: flex;
@@ -78,30 +78,30 @@
 }
 
 .title {
-  margin-bottom: $spacing-sm !important;
+  margin-bottom: $spacing-sm;
   color: $color-text-primary;
 }
 
 .footer {
   text-align: center;
-  margin-top: $spacing-lg;
-  padding-top: $spacing-lg;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
   border-top: 1px solid $color-border-secondary;
 }
 
-.loginCard {
+.authCard {
   :global {
     .ant-form-item {
-      margin-bottom: $spacing-lg;
+      margin-bottom: $spacing-md;
     }
 
     .ant-input-affix-wrapper {
       border-radius: $border-radius-md;
-      
+
       &:hover {
         border-color: $color-primary;
       }
-      
+
       &:focus,
       &.ant-input-affix-wrapper-focused {
         border-color: $color-primary;
@@ -110,26 +110,26 @@
 
       // 取消输入框内部 input 的边框
       .ant-input {
-        border: none !important;
-        box-shadow: none !important;
-        outline: none !important;
-        
+        border: none;
+        box-shadow: none;
+        outline: none;
+
         &:hover,
         &:focus {
-          border: none !important;
-          box-shadow: none !important;
-          outline: none !important;
+          border: none;
+          box-shadow: none;
+          outline: none;
         }
       }
     }
 
     .ant-input {
       border-radius: $border-radius-md;
-      
+
       &:hover {
         border-color: $color-primary;
       }
-      
+
       &:focus {
         border-color: $color-primary;
         box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
@@ -147,7 +147,7 @@
       transition: all $transition-base;
 
       &:hover {
-        background: $color-primary-hover !important;
+        background: $color-primary-hover;
         transform: translateY(-2px);
         box-shadow: $shadow-lg;
       }
@@ -163,8 +163,8 @@
 
     .ant-btn-link {
       &:hover {
-        transform: none !important;
-        box-shadow: none !important;
+        transform: none;
+        box-shadow: none;
       }
     }
   }

@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { App, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 	description: 'BlockFoundry Web Management System',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang="zh-CN">
 			<body>
