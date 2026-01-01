@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
 				name: newName,
 				path: newPath,
 				parentId: newParentId,
+				userId: sourceFolder.userId,
 			},
 		});
 
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
 					name: subFolder.name,
 					path: newSubPath,
 					parentId: subFolder.parentId === sourceFolder.id ? newFolder.id : null,
+					userId: subFolder.userId,
 				},
 			});
 
@@ -99,10 +101,7 @@ export async function POST(request: NextRequest) {
 		// 获取所有资源
 		const resources = await prisma.textureResource.findMany({
 			where: {
-				OR: [
-					{ filePath: { startsWith: `${sourceFolder.path}.` } },
-					{ filePath: sourceFolder.path },
-				],
+				OR: [{ filePath: { startsWith: `${sourceFolder.path}.` } }, { filePath: sourceFolder.path }],
 			},
 		});
 
@@ -118,23 +117,23 @@ export async function POST(request: NextRequest) {
 			}
 
 			// 创建资源副本（引用相同的物理文件）
-		await prisma.textureResource.create({
-			data: {
-				name: resource.name,
-				description: resource.description,
-				fileName: resource.fileName,
-				filePath: newFilePath,
-				originalUrl: resource.originalUrl, // 引用相同的物理文件
-				thumbnailUrl: resource.thumbnailUrl,
-				width: resource.width,
-				height: resource.height,
-				format: resource.format,
-				fileSize: resource.fileSize,
-				isPublic: resource.isPublic,
-				tags: resource.tags,
-				usageCount: 0, // 新复制的资源使用次数重置为0
-			},
-		});
+				await prisma.textureResource.create({
+					data: {
+						name: resource.name,
+						description: resource.description,
+						fileName: resource.fileName,
+						filePath: newFilePath,
+						originalUrl: resource.originalUrl, // 引用相同的物理文件
+						width: resource.width,
+						height: resource.height,
+						format: resource.format,
+						fileSize: resource.fileSize,
+						isPublic: resource.isPublic,
+						tags: resource.tags,
+						usageCount: 0, // 新复制的资源使用次数重置为0
+						userId: resource.userId, // 保持原资源的用户ID
+					},
+				});
 		}
 
 		return NextResponse.json({
