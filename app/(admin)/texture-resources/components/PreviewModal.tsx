@@ -29,7 +29,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({
 					<Row gutter={16}>
 						<Col span={12}>
 							<div className={styles.previewImageContainer}>
-								<Image src={resource.originalUrl} alt={resource.name} className={styles.previewImage} />
+								<Image src={resource.url} alt={resource.name} className={styles.previewImage} />
 							</div>
 						</Col>
 						<Col span={12}>

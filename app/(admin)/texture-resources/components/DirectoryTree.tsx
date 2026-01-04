@@ -18,11 +18,9 @@ import { FileManagerApiService, GenericFileManager } from '@/app/components/comm
 
 interface DirectoryTreeProps {
 	resources: TextureResource[];
-	onResourceSelect: (resource: TextureResource | null) => void;
-	onResourcesChange: (resources: TextureResource[]) => void;
-	onFolderSelect: (folderPath: string) => void;
-	onFolderCreated?: () => void;
-	onFolderCountChange?: (count: number) => void;
+	onResourceSelect?: (resource: TextureResource) => void;
+	onResourceChange?: () => void;
+	onFolderSelect?: (folder: VirtualFolder) => void;
 	width?: number;
 	onWidthChange?: (width: number) => void;
 }
@@ -47,28 +45,24 @@ const createTextureApiService = (): FileManagerApiService<TextureResource, Virtu
 const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 	resources,
 	onResourceSelect,
-	onResourcesChange,
+	onResourceChange,
 	onFolderSelect,
-	onFolderCreated,
-	onFolderCountChange,
 	width = 300,
 	onWidthChange,
 }) => {
 	return (
 		<GenericFileManager<TextureResource, VirtualFolder>
 			files={resources}
-			onFilesChange={onResourcesChange}
 			apiService={createTextureApiService()}
 			onFileSelect={onResourceSelect}
+			onNodeChange={onResourceChange}
 			onFolderSelect={onFolderSelect}
-			onFolderCreated={onFolderCreated}
-			onFolderCountChange={onFolderCountChange}
 			fileUploadConfig={{
 				accept: 'image/*',
 				validate: (file) => {
 					return file.type.startsWith('image/');
 				},
-				buildFileData: (file, folderPath) => {
+				buildFileData: (file, folderId) => {
 					const fileName = file.name.replace(/\.[^/.]+$/, '');
 					return {
 						file,
@@ -76,7 +70,7 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 						description: '',
 						tags: [],
 						isPublic: true,
-						folderPath,
+						folderId,
 					};
 				},
 			}}
@@ -84,7 +78,6 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 			downloadFile={downloadTextureResource}
 			width={width}
 			onWidthChange={onWidthChange}
-			allowRootEdit={false}
 		/>
 	);
 };

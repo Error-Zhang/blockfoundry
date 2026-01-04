@@ -19,6 +19,7 @@ export class ErrorHandler {
 	async execute<T>(
 		operation: () => Promise<T>,
 		options?: {
+			key?: string;
 			successMessage?: string;
 			errorMessage?: string;
 			onSuccess?: (data: T) => void | Promise<void>;
@@ -29,7 +30,7 @@ export class ErrorHandler {
 			const result = await operation();
 
 			if (options?.successMessage) {
-				this.message.success(options.successMessage);
+				this.message.success({ content: options.successMessage, key: options.key });
 			}
 
 			if (options?.onSuccess) {
@@ -39,8 +40,8 @@ export class ErrorHandler {
 			return result;
 		} catch (error) {
 			console.error(error);
-			const errorMsg = error instanceof Error ? error.message : options?.errorMessage || '操作失败';
-			this.message.error(errorMsg);
+			const errorMsg = options?.errorMessage || '操作失败';
+			this.message.error({ content: errorMsg, key: options?.key });
 
 			if (options?.onError) {
 				options.onError(error);
@@ -56,39 +57,28 @@ export class ErrorHandler {
 	async executeApi<T = undefined>(
 		apiCall: () => Promise<ApiResponse<T>>,
 		options?: {
+			key?: string;
 			successMessage?: string;
 			errorMessage?: string;
 			onSuccess?: (data: T) => void | Promise<void>;
 			onError?: (error: string) => void;
 		}
 	): Promise<T | null> {
-		try {
-			const result = await apiCall();
+		const result = await apiCall();
 
-			if (result.success) {
-				if (options?.successMessage) {
-					this.message.success(options.successMessage);
-				}
-
-				if (options?.onSuccess) {
-					await options.onSuccess(result.data!);
-				}
-
-				return result.data!;
-			} else {
-				const errorMsg = result.error || options?.errorMessage || '操作失败';
-				this.message.error(errorMsg);
-
-				if (options?.onError) {
-					options.onError(errorMsg);
-				}
-
-				return null;
+		if (result.success) {
+			if (options?.successMessage) {
+				this.message.success({ content: options.successMessage, key: options.key });
 			}
-		} catch (error) {
-			console.error(error);
-			const errorMsg = error instanceof Error ? error.message : options?.errorMessage || '操作失败';
-			this.message.error(errorMsg);
+
+			if (options?.onSuccess) {
+				await options.onSuccess(result.data!);
+			}
+
+			return result.data!;
+		} else {
+			const errorMsg = result.error || options?.errorMessage || '操作失败';
+			this.message.error({ content: errorMsg, key: options?.key });
 
 			if (options?.onError) {
 				options.onError(errorMsg);

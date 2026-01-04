@@ -8,7 +8,7 @@ export interface VirtualFolder {
 	id: string;
 	name: string;
 	path: string;
-	parentId: string | null;
+	parentId: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -24,7 +24,7 @@ export async function getVirtualFolders(parentPath?: string): Promise<ApiRespons
  * 创建虚拟文件夹
  */
 export async function createVirtualFolder(name: string, parentId: string): Promise<ApiResponse<VirtualFolder>> {
-	return post<VirtualFolder>('/api/virtual-folders', { name, parentPath: parentId });
+	return post<VirtualFolder>('/api/virtual-folders', { name, parentId });
 }
 
 /**
@@ -42,32 +42,20 @@ export async function deleteVirtualFolder(id: string): Promise<ApiResponse<void>
 }
 
 /**
- * 更新虚拟文件夹路径
- */
-export interface UpdateVirtualFolderParams {
-	name?: string;
-	path?: string;
-}
-
-export async function updateVirtualFolder(id: string, params: UpdateVirtualFolderParams): Promise<ApiResponse<VirtualFolder>> {
-	return put<VirtualFolder>(`/api/virtual-folders/${id}`, params);
-}
-
-/**
  * 移动虚拟文件夹到新路径
  */
 export async function moveVirtualFolder(id: string, targetParentId: string): Promise<ApiResponse<VirtualFolder>> {
-	return post<VirtualFolder>(`/api/virtual-folders/${id}/move`, { newPath: targetParentId });
+	return post<VirtualFolder>(`/api/virtual-folders/${id}/move`, {
+		targetParentId,
+	});
 }
 
 /**
  * 复制虚拟文件夹
  */
 export async function copyVirtualFolder(id: string, targetParentId: string): Promise<ApiResponse<VirtualFolder>> {
-	return post<VirtualFolder>('/api/virtual-folders/copy', { 
-		folderId: id, 
-		newName: '', 
-		targetParentId: targetParentId || null 
+	return post<VirtualFolder>(`/api/virtual-folders/${id}/copy`, {
+		targetParentId,
 	});
 }
 

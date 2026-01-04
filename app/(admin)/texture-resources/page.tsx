@@ -29,8 +29,8 @@ export default function TextureResourceManagementPage() {
 	const [previewResource, setPreviewResource] = useState<TextureResource | null>(null);
 	const [batchUploadVisible, setBatchUploadVisible] = useState(false);
 	const [searchText, setSearchText] = useState('');
-	const [currentFolderPath, setCurrentFolderPath] = useState('');
-	const [folderCount, setFolderCount] = useState(0);
+	const [currentFolderId, setCurrentFolderId] = useState<string>(null!);
+	const [totalCount, setTotalCount] = useState(0);
 	const [tagCount, setTagCount] = useState(0);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [highlightedResourceId, setHighlightedResourceId] = useState<string | null>(null);
@@ -51,14 +51,15 @@ export default function TextureResourceManagementPage() {
 	// 加载纹理资源
 	const { loading, handle: loadResources } = useAsyncAction(getTextureResources, {
 		onSuccess: (_, data) => {
-			setResources(data!);
+			setResources(data!.resources);
+			setTotalCount(data!.totalCount);
 		},
 	});
 
 	// 初始化和文件夹切换时加载数据
 	useEffect(() => {
-		loadResources(currentFolderPath);
-	}, [currentFolderPath]);
+		loadResources(currentFolderId);
+	}, [currentFolderId]);
 
 	// 计算标签数量
 	useEffect(() => {
@@ -112,7 +113,7 @@ export default function TextureResourceManagementPage() {
 			await handleCreateResource({
 				...values,
 				file: fileList[0].originFileObj,
-				folderPath: currentFolderPath,
+				folderId: currentFolderId,
 			});
 		}
 		setModalVisible(false);
@@ -173,13 +174,13 @@ export default function TextureResourceManagementPage() {
 		{
 			key: 'totalTextures',
 			title: '总纹理数',
-			value: resources.length,
+			value: totalCount,
 			prefix: <FileImageOutlined />,
 		},
 		{
-			key: 'texturePacks',
-			title: '纹理包数',
-			value: folderCount,
+			key: 'selectTextures',
+			title: '所选纹理数',
+			value: resources.length,
 			prefix: <FolderOutlined />,
 		},
 		{
@@ -209,7 +210,6 @@ export default function TextureResourceManagementPage() {
 				<div className={`${styles.directoryTree} ${isExpanded ? styles.hidden : styles.visible}`}>
 					<DirectoryTree
 						resources={resources}
-						onResourcesChange={setResources}
 						onResourceSelect={(resource) => {
 							if (resource) {
 								setHighlightedResourceId(resource.id);
@@ -217,9 +217,8 @@ export default function TextureResourceManagementPage() {
 								setTimeout(() => setHighlightedResourceId(null), 3000);
 							}
 						}}
-						onFolderSelect={setCurrentFolderPath}
-						onFolderCreated={() => loadResources(currentFolderPath)}
-						onFolderCountChange={setFolderCount}
+						onFolderSelect={(folder) => setCurrentFolderId(folder.id)}
+						onResourceChange={() => loadResources(currentFolderId)}
 						width={sidebarWidth}
 						onWidthChange={handleSidebarWidthChange}
 					/>
@@ -263,7 +262,7 @@ export default function TextureResourceManagementPage() {
 				visible={batchUploadVisible}
 				onCancel={() => setBatchUploadVisible(false)}
 				onUpload={handleBatchUpload}
-				currentFolderPath={currentFolderPath}
+				currentFolderId={currentFolderId}
 			/>
 		</div>
 	);

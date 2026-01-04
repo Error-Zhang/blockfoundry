@@ -49,14 +49,14 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 	const columns: ColumnsType<TextureResource> = [
 		{
 			title: '预览',
-			dataIndex: 'originalUrl',
+			dataIndex: 'url',
 			key: 'preview',
 			width: 80,
-			render: (originalUrl: string, record: TextureResource) => (
+			render: (url: string, record: TextureResource) => (
 				<Image
 					width={50}
 					height={50}
-					src={originalUrl}
+					src={url}
 					alt={record.name}
 					className={styles.resourceThumbnail}
 					fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
@@ -69,18 +69,13 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			key: 'name',
 			width: 160,
 			render: (text: string, record: TextureResource) => {
-				// 转换为路径格式并添加扩展名
-				const getFileExtension = (fileName: string) => {
-					const match = fileName.match(/\.[^.]+$/);
-					return match ? match[0] : '';
-				};
-				const extension = getFileExtension(record.fileName);
-				const windowsPath = record.filePath.replace(/\./g, '\\') + extension;
+				// 显示文件夹路径
+				const displayPath = record.folderPath ? record.folderPath.replace(/\./g, '\\') : '';
 
 				return (
 					<div>
 						<div className={styles.resourceName}>{text}</div>
-						<div className={styles.resourceFilename}>{record.description || windowsPath}</div>
+						<div className={styles.resourceFilename}>{record.description || displayPath}</div>
 					</div>
 				);
 			},

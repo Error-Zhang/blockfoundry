@@ -4,8 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { UPLOAD_BASE_DIR } from '@/lib/constants';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthHandler(async (request: NextRequest, context, user) => {
     try {
         const { folderId } = await request.json();
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
 
         // 获取虚拟文件夹信息
         const folder = await prisma.virtualFolder.findUnique({
-            where: { id: folderId },
+            where: { id: folderId, userId: user.id },
         });
         
         if (!folder) {
@@ -25,13 +26,29 @@ export async function POST(request: NextRequest) {
         const folderPath = folder.path;
         const folderName = folder.name;
 
+        // 获取所有子文件夹
+        const subFolders = await prisma.virtualFolder.findMany({
+            where: {
+                userId: user.id,
+                path: {
+                    startsWith: `${folderPath}.`,
+                },
+            },
+        });
+
+        // 获取当前文件夹及其所有子文件夹的ID
+        const folderIds = [folderId, ...subFolders.map(f => f.id)];
+
         // 获取文件夹下的所有资源
         const resources = await prisma.textureResource.findMany({
             where: {
-                OR: [
-                    { filePath: folderPath },
-                    { filePath: { startsWith: `${folderPath}.` } },
-                ],
+                userId: user.id,
+                folderId: {
+                    in: folderIds,
+                },
+            },
+            include: {
+                folder: true,
             },
             orderBy: {
                 createdAt: 'desc',
@@ -42,36 +59,24 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '文件夹为空' }, { status: 400 });
         }
 
-        // 转换 tags 字段
-        const folderResources = resources.map((resource) => ({
-            ...resource,
-            tags: resource.tags ? JSON.parse(resource.tags) : [],
-        }));
-
         // 创建 ZIP 文件
         const zip = new JSZip();
 
         // 下载所有文件并添加到 ZIP
-        const downloadPromises = folderResources.map(async (resource) => {
+        const downloadPromises = resources.map(async (resource) => {
             try {
                 // 从本地文件系统读取文件
-                // originalUrl 格式: /uploads/textures/xxx.png
-                // 需要转换为: data/uploads/textures/xxx.png
-                const fileRelativePath = resource.originalUrl.replace('/uploads/', '');
-                const filePath = join(UPLOAD_BASE_DIR, fileRelativePath);
+                const filePath = join(UPLOAD_BASE_DIR, 'textures', resource.fileName);
                 const fileBuffer = await readFile(filePath);
                 
-                // 计算相对路径
-                const zipRelativePath = resource.filePath.replace(`${folderPath}.`, '').replace(folderPath, '');
-                const pathParts = zipRelativePath.split('.');
-                const fileName = resource.fileName || resource.name;
-                
                 // 构建文件在 ZIP 中的路径
-                let zipPath = fileName;
-                if (pathParts.length > 1 && pathParts[0]) {
-                    // 有子文件夹
-                    const subFolders = pathParts.slice(0, -1).join('/');
-                    zipPath = `${subFolders}/${fileName}`;
+                let zipPath = resource.fileName;
+                
+                if (resource.folder && resource.folder.path !== folderPath) {
+                    // 资源在子文件夹中，计算相对路径
+                    const relativePath = resource.folder.path.replace(`${folderPath}.`, '');
+                    const subFolders = relativePath.split('.').join('/');
+                    zipPath = `${subFolders}/${resource.fileName}`;
                 }
                 
                 zip.file(zipPath, fileBuffer);
@@ -105,4 +110,4 @@ export async function POST(request: NextRequest) {
         console.error('下载文件夹失败:', error);
         return NextResponse.json({ error: '下载文件夹失败' }, { status: 500 });
     }
-}
+});

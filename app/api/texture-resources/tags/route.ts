@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withAuth } from '@/lib/auth-middleware';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // GET - 获取所有使用过的标签
-export async function GET() {
-	// 认证检查
-	const authResult = await withAuth();
-	if (!authResult.authenticated) {
-		return authResult.response;
-	}
-
+export const GET = withAuthHandler(async (request, context, user) => {
 	try {
 		// 从数据库获取当前用户的所有纹理资源
 		const resources = await prisma.textureResource.findMany({
 			where: {
-				userId: authResult.user.id,
+				userId: user.id,
 			},
 			select: {
 				tags: true,
@@ -55,4 +49,4 @@ export async function GET() {
 			{ status: 500 }
 		);
 	}
-}
+});

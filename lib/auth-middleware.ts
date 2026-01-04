@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * API认证中间件
@@ -29,3 +29,22 @@ export async function withAuth() {
  * 类型定义
  */
 export type AuthResult = Awaited<ReturnType<typeof withAuth>>;
+
+type AuthenticatedUser = Extract<AuthResult, { authenticated: true }>['user'];
+
+type AuthenticatedHandler<T = any> = (request: NextRequest, context: T, user: AuthenticatedUser) => Promise<NextResponse>;
+
+/**
+ * 高阶函数,为路由处理器添加认证检查
+ * @param handler 需要认证的路由处理器
+ * @returns 包装后的路由处理器
+ */
+export function withAuthHandler<T = any>(handler: AuthenticatedHandler<T>) {
+	return async (request: NextRequest, context: T) => {
+		const authResult = await withAuth();
+		if (!authResult.authenticated) {
+			return authResult.response;
+		}
+		return handler(request, context, authResult.user);
+	};
+}

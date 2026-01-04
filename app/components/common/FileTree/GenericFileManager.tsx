@@ -12,10 +12,10 @@ import {
 	ScissorOutlined,
 	SnippetsOutlined,
 } from '@ant-design/icons';
-import { ContextMenuItem, DragInfo, FileTree, TreeNode, TreeNodeType } from '@/app/components/common/FileTree/index';
+import { ClipboardData, ContextMenuItem, DragInfo, FileTree, TreeNode } from '@/app/components/common/FileTree/index';
 import { FileManagerApiService, FileTreeOperations } from '@/app/components/common/FileTree/FileTreeOperations';
 import { useErrorHandler } from '@/app/utils/errorHandler';
-import { buildPath, findTreeNode, getPathName } from '@/app/components/common/FileTree/treeUtils';
+import { buildPath } from '@/app/components/common/FileTree/treeUtils';
 
 /**
  * 虚拟文件夹基础接口
@@ -24,7 +24,7 @@ export interface BaseVirtualFolder {
 	id: string;
 	name: string;
 	path: string;
-	parentId: string | null;
+	parentId: string;
 }
 
 /**
@@ -33,7 +33,7 @@ export interface BaseVirtualFolder {
 export interface BaseFileResource {
 	id: string;
 	name: string;
-	filePath: string;
+	folderId: string;
 }
 
 /**
@@ -42,24 +42,21 @@ export interface BaseFileResource {
 export interface FileManagerConfig<TFile extends BaseFileResource, TFolder extends BaseVirtualFolder> {
 	// 数据源
 	files: TFile[];
-	onFilesChange: (files: TFile[]) => void;
 
 	// API 服务
 	apiService: FileManagerApiService<TFile, TFolder>;
 
 	// 选择回调
-	onFileSelect: (file: TFile | null) => void;
-	onFolderSelect: (folderPath: string) => void;
+	onFileSelect?: (file: TFile) => void;
+	onFolderSelect?: (folder: TFolder) => void;
 
 	// 可选回调
-	onFolderCreated?: () => void;
-	onFolderCountChange?: (count: number) => void;
-
+	onNodeChange?: () => void;
 	// 文件上传配置
 	fileUploadConfig?: {
 		accept?: string;
 		validate?: (file: File) => boolean | Promise<boolean>;
-		buildFileData: (file: File, folderPath: string) => unknown;
+		buildFileData: (file: File, folderId: string) => unknown;
 	};
 
 	// 自定义文件图标
@@ -69,7 +66,7 @@ export interface FileManagerConfig<TFile extends BaseFileResource, TFolder exten
 	downloadFile?: (file: TFile) => void;
 
 	// 自定义上下文菜单
-	customContextMenu?: (nodeType: TreeNodeType, node: TreeNode<TFile>, defaultMenu: ContextMenuItem[]) => ContextMenuItem[];
+	customContextMenu?: (node: TreeNode<TFile | TFolder>, defaultMenu: ContextMenuItem[]) => ContextMenuItem[];
 
 	// 宽度控制
 	width?: number;
@@ -84,238 +81,195 @@ export interface FileManagerConfig<TFile extends BaseFileResource, TFolder exten
  */
 export function GenericFileManager<TFile extends BaseFileResource, TFolder extends BaseVirtualFolder>({
 	files,
-	onFilesChange,
+	onNodeChange,
 	apiService,
 	onFileSelect,
 	onFolderSelect,
-	onFolderCreated,
-	onFolderCountChange,
 	fileUploadConfig,
 	fileIcon,
 	downloadFile,
 	customContextMenu,
 	width = 300,
 	onWidthChange,
-	allowRootEdit = false,
+	allowRootEdit = true,
 }: FileManagerConfig<TFile, TFolder>) {
 	const errorHandler = useErrorHandler();
 	const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 	const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-	const [selectedNode, setSelectedNode] = useState<TreeNode<TFile> | null>(null);
+	const [selectedFile, setSelectedFileNode] = useState<TreeNode<TFile> | null>(null);
+	const [selectedFolder, setSelectedFolderNode] = useState<TreeNode<TFolder>>(null!);
 	const [virtualFolders, setVirtualFolders] = useState<TFolder[]>([]);
-	const [rootFolder, setRootFolder] = useState<TFolder | null>(null);
-	const [clipboard, setClipboard] = useState<{
-		type: 'copy' | 'cut' | 'copy_folder';
-		nodeKey: string;
-		nodeData: TreeNode<TFile>;
-	} | null>(null);
+	const [rootFolder, setRootFolder] = useState<TFolder>(null!);
+	const [clipboard, setClipboard] = useState<ClipboardData<TFile | TFolder>>();
 	const [isCreatingNewFolder, setIsCreatingNewFolder] = useState<boolean>(false);
+	const [rightClickedFolder, setRightClickedFolder] = useState<TreeNode<TFolder> | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// 加载虚拟文件夹
 	const loadVirtualFolders = async () => {
 		const data = await errorHandler.executeApi(() => apiService.getFolders());
-		if (data) {
-			setVirtualFolders(data);
-			const root = data.find((vf) => vf.parentId === null);
-			setRootFolder(root || null);
-		}
+		const root = data?.find((vf) => vf.parentId === null);
+		if (!root) return errorHandler.error('根目录不存在');
+
+		setVirtualFolders(data!);
+		setRootFolder(root);
 	};
 
 	useEffect(() => {
 		loadVirtualFolders();
 	}, []);
 
-	// 计算文件夹数量
-	useEffect(() => {
-		const currentFolderPath = selectedNode?.nodeType === 'folder' ? selectedNode.path : '';
-
-		if (!currentFolderPath) {
-			const rootFolders = virtualFolders.filter((vf) => !vf.path.includes('.'));
-			onFolderCountChange?.(rootFolders.length);
-		} else {
-			const childFolders = virtualFolders.filter((vf) => {
-				const parentPath = vf.path.substring(0, vf.path.lastIndexOf('.'));
-				return parentPath === currentFolderPath;
-			});
-			onFolderCountChange?.(childFolders.length);
-		}
-	}, [selectedNode, virtualFolders, onFolderCountChange]);
-
 	// 创建文件树操作实例
 	const folderOperations = useMemo(
 		() =>
 			new FileTreeOperations<TFile, TFolder>({
-				items: files,
-				folders: virtualFolders,
-				getItemPath: (item) => item.filePath,
-				getItemId: (item) => item.id,
-				getFolderPath: (folder) => folder.path,
+				getFileId: (file) => file.id,
+				getFileFolderId: (file) => file.folderId,
+				getFilePath: (file) => {
+					const folder = virtualFolders.find((f) => f.id === file.folderId)!;
+					return folder.path === rootFolder.path ? file.name : `${folder.path}.${file.name}`;
+				},
 				getFolderId: (folder) => folder.id,
 				getFolderName: (folder) => folder.name,
-				getFolderParentId: (folder) => folder.parentId,
+				getFolderParentId: (folder) => folder.parentId!,
+				getFolderPath: (folder) => folder.path,
+				files,
+				folders: virtualFolders,
 				api: apiService,
-				onItemsChange: onFilesChange,
-				onFoldersReload: async () => {
+				onFileChange: async () => {
 					await loadVirtualFolders();
-					onFolderCreated?.();
+					onNodeChange?.();
+				},
+				onFolderChange: async () => {
+					await loadVirtualFolders();
+					onNodeChange?.();
 				},
 				onFolderSelect,
 				errorHandler,
 			}),
-		[files, virtualFolders, onFilesChange, onFolderCreated, onFolderSelect, errorHandler, apiService]
+		[files, virtualFolders, onNodeChange, onFolderSelect, errorHandler, apiService, rootFolder]
 	);
 
 	// 构建树数据
-	const buildTreeFromResources = useCallback((): TreeNode<TFile>[] => {
-		if (!rootFolder) {
-			return [];
-		}
-
-		const root: TreeNode<TFile> = {
+	const treeData = useMemo((): TreeNode<TFile | TFolder>[] => {
+		if (!rootFolder) return [];
+		const root: TreeNode<TFolder> = {
 			key: 'root',
 			title: rootFolder.name,
 			nodeType: 'root',
 			path: rootFolder.path,
 			icon: <FolderOpenOutlined />,
 			children: [],
+			data: rootFolder,
 		};
 
-		const folderMap = new Map<string, TreeNode<TFile>>();
-		folderMap.set(rootFolder.path, root);
+		const folderMap = new Map<string, TreeNode<TFile | TFolder>>();
+		folderMap.set(rootFolder.id, root);
 
 		// 创建文件夹节点
 		virtualFolders
 			.filter((vf) => vf.id !== rootFolder.id)
 			.forEach((vFolder) => {
-				const pathParts = vFolder.path.split('.');
-				let currentPath = '';
-				let currentParent = root;
+				const folderNode: TreeNode<TFolder> = {
+					key: `folder-${vFolder.id}`,
+					title: vFolder.name,
+					nodeType: 'folder',
+					path: vFolder.path,
+					icon: <FolderOutlined />,
+					children: [],
+					data: vFolder,
+				};
 
-				for (let i = 0; i < pathParts.length; i++) {
-					const part = pathParts[i];
-					const newPath = currentPath ? `${currentPath}.${part}` : part;
+				folderMap.set(vFolder.id, folderNode);
 
-					if (!folderMap.has(newPath)) {
-						const folderNode: TreeNode<TFile> = {
-							key: `folder-${newPath}`,
-							title: part,
-							nodeType: 'folder',
-							path: newPath,
-							icon: <FolderOutlined />,
-							children: [],
-						};
-
-						folderMap.set(newPath, folderNode);
-						currentParent.children!.push(folderNode);
-					}
-
-					currentParent = folderMap.get(newPath)!;
-					currentPath = newPath;
+				// 找到父节点并添加
+				const parentNode = folderMap.get(vFolder.parentId || rootFolder.id);
+				if (parentNode) {
+					parentNode.children!.push(folderNode);
 				}
 			});
 
 		// 创建文件节点
 		files.forEach((file) => {
-			const fileName = getPathName(file.filePath);
+			const fileName = file.name;
+			// 根据 folderId 找到父节点
+			const folder = virtualFolders.find((f) => f.id === file.folderId);
+			if (!folder) return;
+
 			const fileNode: TreeNode<TFile> = {
 				key: `file-${file.id}`,
 				title: fileName,
 				nodeType: 'file',
-				path: file.filePath,
+				path: buildPath(folder.path, fileName),
 				icon: fileIcon,
 				isLeaf: true,
 				data: file,
 			};
 
-			let parentPath = file.filePath;
-			if (parentPath.startsWith(rootFolder.path + '.')) {
-				parentPath = parentPath.substring(rootFolder.path.length + 1);
+			const parentNode = folderMap.get(file.folderId || rootFolder.id);
+			if (parentNode) {
+				parentNode.children!.push(fileNode);
 			}
-
-			if (parentPath.includes('.')) {
-				parentPath = parentPath.substring(0, parentPath.lastIndexOf('.'));
-				parentPath = rootFolder.path + '.' + parentPath;
-			} else {
-				parentPath = rootFolder.path;
-			}
-
-			const parentNode = folderMap.get(parentPath) || root;
-
-			if (!parentNode.children) {
-				parentNode.children = [];
-			}
-
-			parentNode.children.push(fileNode);
 		});
 
 		// 添加临时新建文件夹节点
-		if (isCreatingNewFolder && selectedNode) {
-			const parentNode = findTreeNode([root], selectedNode.key);
-			if (parentNode) {
-				if (!parentNode.children) {
-					parentNode.children = [];
-				}
+		if (isCreatingNewFolder && rightClickedFolder) {
+			// 在当前构建的树中找到对应的父节点
+			const parentFolderId = (rightClickedFolder.data as TFolder).id;
+			const parentNode = folderMap.get(parentFolderId);
 
-				const basePath = parentNode.nodeType === 'root' ? rootFolder.path : parentNode.path;
-				const tempFolderNode: TreeNode<TFile> = {
+			if (parentNode) {
+				const tempFolderNode: TreeNode<TFolder> = {
 					key: 'temp-new-folder',
 					title: '新文件夹',
 					nodeType: 'folder',
-					path: buildPath(basePath, '新文件夹'),
+					path: buildPath(rightClickedFolder.path, '新文件夹'),
 					icon: <FolderOutlined />,
 					children: [],
 					isEditing: true,
+					data: { parentId: parentFolderId } as TFolder,
 				};
-				parentNode.children.unshift(tempFolderNode);
+				parentNode.children!.unshift(tempFolderNode);
 			}
 		}
 
 		return [root];
-	}, [files, virtualFolders, rootFolder, isCreatingNewFolder, selectedNode, fileIcon]);
+	}, [files, virtualFolders, rootFolder, isCreatingNewFolder, rightClickedFolder, fileIcon]);
+
+	// 首次加载自动选择根节点
+	useEffect(() => {
+		if (treeData.length && !selectedFolder) {
+			handleSelect(['root'], treeData[0]);
+		}
+	}, [treeData]);
 
 	// 处理节点选择
-	const handleSelect = useCallback(
-		(keys: string[], node: TreeNode<TFile> | null) => {
-			setSelectedKeys(keys);
-			setSelectedNode(node);
-
-			if (node?.nodeType === 'file' && node.data) {
-				onFileSelect(node.data);
-				onFolderSelect('');
-			} else if (node?.nodeType === 'folder') {
-				onFileSelect(null);
-				onFolderSelect(node.path);
-			} else if (node?.nodeType === 'root' && rootFolder) {
-				onFileSelect(null);
-				onFolderSelect(rootFolder.path);
-			} else {
-				onFileSelect(null);
-				onFolderSelect('');
-			}
-		},
-		[onFileSelect, onFolderSelect, rootFolder]
-	);
+	const handleSelect = useCallback((keys: string[], node: TreeNode<TFile | TFolder>) => {
+		setSelectedKeys(keys);
+		if (node.nodeType === 'file') {
+			setSelectedFileNode(node as TreeNode<TFile>);
+			onFileSelect?.(node.data as TFile);
+		} else {
+			setSelectedFolderNode(node as TreeNode<TFolder>);
+			onFolderSelect?.(node.data as TFolder);
+		}
+	}, []);
 
 	// 处理节点编辑
 	const handleNodeEdit = useCallback(
-		async (node: TreeNode<TFile>, newValue: string): Promise<boolean> => {
-			if (!newValue.trim()) {
+		async (node: TreeNode<TFile | TFolder>, newName: string): Promise<boolean> => {
+			if (!newName.trim()) {
 				errorHandler.error('名称不能为空');
 				return false;
 			}
 
 			// 处理新建文件夹
 			if (node.key === 'temp-new-folder' && isCreatingNewFolder) {
-				const treeData = buildTreeFromResources();
-				const parentNode = selectedNode ? findTreeNode(treeData, selectedNode.key) : null;
-				if (!parentNode || !rootFolder) return false;
-
-				const basePath = parentNode.nodeType === 'root' ? rootFolder.path : parentNode.path;
-				const success = await folderOperations.confirmCreateFolder(newValue, basePath);
+				const success = await folderOperations.confirmCreateFolder(newName, (node.data as TFolder).parentId);
 
 				if (success) {
 					setIsCreatingNewFolder(false);
+					setRightClickedFolder(null);
 				}
 
 				return success;
@@ -323,11 +277,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 
 			// 处理文件重命名
 			if (node.nodeType === 'file' && node.data) {
-				return await folderOperations.renameItem(node.data, newValue, (item, name) => {
-					const pathParts = item.filePath.split('.');
-					pathParts[pathParts.length - 1] = name;
-					return pathParts.join('.');
-				});
+				return await folderOperations.renameFile(node.data as TFile, newName);
 			}
 
 			// 处理文件夹重命名
@@ -338,147 +288,98 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 					return false;
 				}
 
-				return await folderOperations.renameFolder(virtualFolder, newValue);
+				return await folderOperations.renameFolder(virtualFolder, newName);
 			}
 
 			return false;
 		},
-		[isCreatingNewFolder, selectedNode, buildTreeFromResources, virtualFolders, rootFolder, folderOperations, errorHandler]
+		[isCreatingNewFolder, rightClickedFolder, selectedFolder, treeData, virtualFolders, rootFolder, folderOperations, errorHandler]
 	);
 
 	// 处理拖拽
 	const handleDrop = useCallback(
-		async (dragInfo: DragInfo<TFile>) => {
+		async (dragInfo: DragInfo<TFile | TFolder>) => {
 			const { dragNode, dropNode, dropPosition } = dragInfo;
 
-			if (dragNode.key === dropNode.key) {
-				errorHandler.warning('不能拖拽到自己');
-				return;
-			}
-
-			if (!rootFolder) return;
-
-			let targetParentPath = '';
-			if (dropPosition !== 'before') {
-				targetParentPath = dropNode.nodeType === 'root' ? rootFolder.path : dropNode.path;
-			} else {
-				errorHandler.warning('只能拖拽到文件夹内部');
-				return;
-			}
-
 			// 处理文件拖拽
-			if (dragNode.nodeType === 'file' && dragNode.data) {
-				await folderOperations.moveItem(dragNode.data, targetParentPath, (item) => getPathName(item.filePath));
+			if (dragNode.nodeType === 'file' && dropPosition !== 'before') {
+				await folderOperations.moveFile(dragNode.data! as TFile, dropNode.data!.id);
 			}
-			// 处理文件夹拖拽
-			else if (dragNode.nodeType === 'folder') {
-				const virtualFolder = virtualFolders.find((vf) => vf.path === dragNode.path);
-				if (!virtualFolder) {
-					errorHandler.error('未找到对应的虚拟文件夹');
-					return;
-				}
 
-				await folderOperations.moveFolder(virtualFolder, targetParentPath);
+			// 处理文件夹拖拽
+			if (dragNode.nodeType === 'folder' && dropPosition !== 'before') {
+				await folderOperations.moveFolder(dragNode.data! as TFolder, dropNode.data!.id);
 			}
 		},
 		[virtualFolders, rootFolder, folderOperations, errorHandler]
 	);
 
 	// 处理粘贴
-	const handlePaste = async (node: TreeNode<TFile>) => {
+	const handlePaste = async (node: TreeNode<TFile | TFolder>) => {
 		if (!clipboard) {
 			errorHandler.warning('剪贴板为空');
 			return;
 		}
 
 		// 处理文件夹粘贴
-		if (clipboard.type === 'copy_folder' && clipboard.nodeData.nodeType === 'folder') {
-			const targetFolder = virtualFolders.find((vf) => vf.path === node.path);
+		const targetId = node.data!.id;
+		const sourceData = clipboard.node.data!;
 
-			const sourceFolder = virtualFolders.find((vf) => vf.path === clipboard.nodeData.path);
-			if (!sourceFolder) {
-				errorHandler.error('未找到源文件夹');
-				return;
-			}
+		// 根据剪贴板类型执行对应操作
+		const operations = {
+			copy: () => folderOperations.copyFile(sourceData as TFile, targetId),
+			copy_folder: () => folderOperations.copyFolder(sourceData as TFolder, targetId),
+			cut: () => folderOperations.moveFile(sourceData as TFile, targetId),
+			cut_folder: () => folderOperations.moveFolder(sourceData as TFolder, targetId),
+		};
 
-			await folderOperations.copyFolder(sourceFolder, targetFolder!.id);
-			setClipboard(null);
-			return;
-		}
+		await operations[clipboard.type]?.();
 
-		// 处理文件粘贴
-		if (clipboard.nodeData.nodeType !== 'file' || !clipboard.nodeData.data) {
-			return;
-		}
-
-		if (!rootFolder) return;
-
-		let targetPath = '';
-		if (node?.nodeType === 'folder') {
-			targetPath = node.path;
-		} else if (node?.nodeType === 'root') {
-			targetPath = rootFolder.path;
-		}
-
-		const resource = clipboard.nodeData.data;
-		const newFilePath = buildPath(targetPath, resource.name);
-
-		if (clipboard.type === 'copy') {
-			await folderOperations.copyItem(resource, newFilePath, (path) => files.some((r) => r.filePath === path));
-		} else {
-			await folderOperations.moveItem(resource, targetPath, (item) => item.name);
-			setClipboard(null);
+		// 剪切操作后清空剪贴板(只能粘贴一次)
+		if (clipboard.type === 'cut' || clipboard.type === 'cut_folder') {
+			setClipboard(undefined);
 		}
 	};
 
 	// 处理删除
-	const handleDelete = async (node: TreeNode<TFile>) => {
-		if (node.nodeType === 'file' && node.data) {
-			await folderOperations.deleteItem(node.data);
+	const handleDelete = async (node: TreeNode<TFile | TFolder>) => {
+		if (node.nodeType === 'file') {
+			await folderOperations.deleteFile(node.data as TFile);
 		} else if (node.nodeType === 'folder') {
-			const virtualFolder = virtualFolders.find((vf) => vf.path === node.path);
-			if (!virtualFolder) {
-				errorHandler.error('未找到对应的虚拟文件夹');
-				return;
-			}
-
-			await folderOperations.deleteFolder(virtualFolder, node.title);
+			await folderOperations.deleteFolder(node.data as TFolder);
 		}
 	};
 
 	// 处理文件上传
-	const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, folderPath: string) => {
+	const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (!file) return;
+
+		if (!fileUploadConfig?.buildFileData) {
+			errorHandler.warning('buildFileData未实现');
+			return;
+		}
 
 		// 自定义验证
 		if (fileUploadConfig?.validate) {
 			const isValid = await fileUploadConfig.validate(file);
-			if (!isValid) {
-				return;
-			}
+			if (!isValid) return;
 		}
 
-		if (!fileUploadConfig?.buildFileData) {
-			errorHandler.error('未配置文件上传数据构建函数');
-			return;
-		}
-
-		await folderOperations.uploadItem(file, folderPath, async (file, folderPath) => {
-			return apiService.createFile(fileUploadConfig.buildFileData(file, folderPath));
+		await folderOperations.uploadFile(file, rightClickedFolder!.data!.id, async (file, folderId) => {
+			return apiService.createFile(fileUploadConfig!.buildFileData(file, folderId));
 		});
 
-		if (fileInputRef.current) {
-			fileInputRef.current.value = '';
-		}
+		fileInputRef.current = null;
+		setRightClickedFolder(null);
 	};
 
 	// 构建上下文菜单
 	const buildContextMenu = useCallback(
-		(nodeType: TreeNodeType, node: TreeNode<TFile>): ContextMenuItem[] => {
+		(node: TreeNode<TFile | TFolder>): ContextMenuItem[] => {
 			const menu: ContextMenuItem[] = [];
 
-			const isRootNode = node.nodeType === 'root' || (rootFolder && node.path === rootFolder.path);
+			const isRootNode = node.nodeType === 'root';
 
 			if (node.nodeType === 'root' || node.nodeType === 'folder') {
 				menu.push(
@@ -487,10 +388,9 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 				);
 
 				if (clipboard) {
+					menu.push({ key: 'divider-1', type: 'divider' });
 					menu.push({ key: 'paste', label: '粘贴', icon: <SnippetsOutlined /> });
 				}
-
-				menu.push({ key: 'divider-1', type: 'divider' });
 
 				// 根据配置决定是否允许根节点重命名
 				if (allowRootEdit || !isRootNode) {
@@ -498,18 +398,21 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 				}
 
 				if (!isRootNode) {
-					menu.push({ key: 'copy_folder', label: '复制文件夹', icon: <CopyOutlined /> });
+					menu.push(
+						{ key: 'cut_folder', label: '移动文件夹', icon: <ScissorOutlined /> },
+						{ key: 'copy_folder', label: '复制文件夹', icon: <CopyOutlined /> }
+					);
 				}
 
 				menu.push({ key: 'divider-2', type: 'divider' });
 
 				menu.push(
 					{ key: 'download_folder', label: '下载文件夹', icon: <DownloadOutlined /> },
-					{ key: 'clear_folder', label: '清空文件夹', icon: <ClearOutlined /> }
+					{ key: 'clear_folder', label: '清空文件夹', icon: <ClearOutlined />, danger: true }
 				);
 
 				// 根据配置决定是否允许根节点删除
-				if (allowRootEdit || !isRootNode) {
+				if (!isRootNode) {
 					menu.push({ key: 'delete', label: '删除文件夹', icon: <DeleteOutlined />, danger: true });
 				}
 			} else if (node.nodeType === 'file') {
@@ -525,7 +428,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 
 			// 应用自定义菜单
 			if (customContextMenu) {
-				return customContextMenu(nodeType, node, menu);
+				return customContextMenu(node, menu);
 			}
 
 			return menu;
@@ -535,10 +438,10 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 
 	// 处理上下文菜单点击
 	const handleContextMenuClick = useCallback(
-		async (key: string, node: TreeNode<TFile>) => {
+		async (key: string, node: TreeNode<TFile | TFolder>) => {
 			switch (key) {
 				case 'new_folder':
-					setSelectedNode(node);
+					setRightClickedFolder(node as TreeNode<TFolder>);
 					setExpandedKeys([...expandedKeys, node.key]);
 					setTimeout(() => {
 						setIsCreatingNewFolder(true);
@@ -546,7 +449,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 					break;
 
 				case 'upload':
-					setSelectedNode(node);
+					setRightClickedFolder(node as TreeNode<TFolder>);
 					fileInputRef.current?.click();
 					break;
 
@@ -555,24 +458,11 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 					break;
 
 				case 'copy':
-					if (node.nodeType === 'file') {
-						setClipboard({ type: 'copy', nodeKey: node.key, nodeData: node });
-						errorHandler.success('已复制');
-					}
-					break;
-
 				case 'copy_folder':
-					if (node.nodeType === 'folder') {
-						setClipboard({ type: 'copy_folder', nodeKey: node.key, nodeData: node });
-						errorHandler.success('已复制文件夹');
-					}
-					break;
-
 				case 'cut':
-					if (node.nodeType === 'file') {
-						setClipboard({ type: 'cut', nodeKey: node.key, nodeData: node });
-						errorHandler.success('已剪切');
-					}
+				case 'cut_folder':
+					setClipboard({ type: key as any, node: node });
+					errorHandler.success(key.includes('copy') ? '已复制' : '已剪切');
 					break;
 
 				case 'paste':
@@ -580,30 +470,20 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 					break;
 
 				case 'download':
-					if (node.nodeType === 'file' && node.data) {
-						if (downloadFile) {
-							downloadFile(node.data);
-						}
+					if (downloadFile) {
+						downloadFile(node.data as TFile);
 						errorHandler.success('开始下载文件');
+					} else {
+						errorHandler.warning('downloadFile未实现');
 					}
 					break;
 
 				case 'download_folder':
-					if (node.nodeType === 'folder' || node.nodeType === 'root') {
-						const virtualFolder = virtualFolders.find((vf) => vf.path === node.path);
-						if (virtualFolder) {
-							await folderOperations.downloadFolder(virtualFolder, node.title);
-						}
-					}
+					await folderOperations.downloadFolder(node.data as TFolder);
 					break;
 
 				case 'clear_folder':
-					if (node.nodeType === 'folder' || node.nodeType === 'root') {
-						const virtualFolder = virtualFolders.find((vf) => vf.path === node.path);
-						if (virtualFolder) {
-							await folderOperations.clearFolder(virtualFolder, node.title);
-						}
-					}
+					await folderOperations.clearFolder(node.data as TFolder);
 					break;
 
 				case 'delete':
@@ -617,7 +497,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 	return (
 		<>
 			<FileTree
-				treeData={buildTreeFromResources()}
+				treeData={treeData}
 				selectedKeys={selectedKeys}
 				expandedKeys={expandedKeys}
 				onSelect={handleSelect}
@@ -629,15 +509,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 				width={width}
 				onWidthChange={onWidthChange}
 			/>
-			<input
-				ref={fileInputRef}
-				type="file"
-				accept={fileUploadConfig?.accept || '*'}
-				style={{ display: 'none' }}
-				onChange={(e) => {
-					handleFileUpload(e, selectedNode?.path ?? '');
-				}}
-			/>
+			<input ref={fileInputRef} type="file" accept={fileUploadConfig?.accept || '*'} style={{ display: 'none' }} onChange={handleFileUpload} />
 		</>
 	);
 }

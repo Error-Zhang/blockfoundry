@@ -8,10 +8,10 @@ interface BatchUploadModalProps {
 	visible: boolean;
 	onCancel: () => void;
 	onUpload: (resources: any[], errors?: string[]) => void;
-	currentFolderPath?: string;
+	currentFolderId: string;
 }
 
-const BatchUploadModal: React.FC<BatchUploadModalProps> = ({ visible, onCancel, onUpload, currentFolderPath = '' }) => {
+const BatchUploadModal: React.FC<BatchUploadModalProps> = ({ visible, onCancel, onUpload, currentFolderId }) => {
 	const { message } = App.useApp();
 	const [fileList, setFileList] = useState<UploadFile[]>([]);
 	const [uploading, setUploading] = useState(false);
@@ -40,7 +40,7 @@ const BatchUploadModal: React.FC<BatchUploadModalProps> = ({ visible, onCancel, 
 			const files = fileList.map((file) => file.originFileObj).filter((f) => f !== null && f !== undefined) as File[];
 
 			// 发送到后端，使用真实进度回调
-			const result = await batchUploadTextureResources(files, currentFolderPath, (progress) => {
+			const result = await batchUploadTextureResources(files, currentFolderId, (progress) => {
 				// 更新所有文件的进度
 				const progressFileList = updatedFileList.map((file) => ({
 					...file,

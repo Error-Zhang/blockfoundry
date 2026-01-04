@@ -1,13 +1,12 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { ReactNode } from 'react';
+import ClientLayout from './client-layout';
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
 	const session = await auth();
 
 	if (!session) redirect('/auth');
-
-	// 动态导入客户端布局组件
-	const { default: ClientLayout } = await import('./client-layout');
 
 	return <ClientLayout session={session}>{children}</ClientLayout>;
 }

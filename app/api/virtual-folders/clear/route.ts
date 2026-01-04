@@ -3,16 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { withAuth } from '@/lib/auth-middleware';
+import { withAuthHandler } from '@/lib/auth-middleware';
 
 // POST - 清空虚拟文件夹
-export async function POST(request: NextRequest) {
-	// 认证检查
-	const authResult = await withAuth();
-	if (!authResult.authenticated) {
-		return authResult.response;
-	}
-
+export const POST = withAuthHandler(async (request: NextRequest, context, user) => {
 	try {
 		const body = await request.json();
 		const { folderId } = body;
@@ -25,7 +19,7 @@ export async function POST(request: NextRequest) {
 		const folder = await prisma.virtualFolder.findFirst({
 			where: { 
 				id: folderId,
-				userId: authResult.user.id,
+				userId: user.id,
 			},
 		});
 
@@ -36,64 +30,67 @@ export async function POST(request: NextRequest) {
 		// 获取所有子文件夹（包括嵌套的，且属于当前用户）
 	const allSubFolders = await prisma.virtualFolder.findMany({
 		where: {
-			userId: authResult.user.id,
+			userId: user.id,
 			path: {
 				startsWith: `${folder.path}.`,
 			},
 		},
 	});
 
-	// 获取文件夹及其所有子文件夹下的所有资源（属于当前用户）
+	// 获取当前文件夹及其所有子文件夹的ID
+	const folderIds = [folderId, ...allSubFolders.map(f => f.id)];
+
+	// 获取所有需要删除的资源
 	const resources = await prisma.textureResource.findMany({
 		where: {
-			userId: authResult.user.id,
-			OR: [
-				// 当前文件夹下的资源
-				{ filePath: { startsWith: `${folder.path}.` } },
-				// 精确匹配当前文件夹路径的资源
-				{ filePath: folder.path },
-			],
+			userId: user.id,
+			folderId: {
+				in: folderIds,
+			},
 		},
 	});
 
 		// 收集所有需要删除的物理文件
 		const filesToDelete: string[] = [];
-		const fileUrlCounts = new Map<string, number>();
+		const fileHashCounts = new Map<string, number>();
 
 		// 统计每个物理文件的引用次数
 		for (const resource of resources) {
-			const url = resource.originalUrl;
-			fileUrlCounts.set(url, (fileUrlCounts.get(url) || 0) + 1);
+			const hash = resource.fileHash;
+			fileHashCounts.set(hash, (fileHashCounts.get(hash) || 0) + 1);
 		}
 
 		// 检查每个文件是否在其他地方被引用
-		for (const [url, count] of fileUrlCounts.entries()) {
+		for (const [hash, count] of fileHashCounts.entries()) {
 			// 查询数据库中该文件的总引用次数
 			const totalCount = await prisma.textureResource.count({
-				where: { originalUrl: url },
+				where: { fileHash: hash },
 			});
 
 			// 如果总引用次数等于当前文件夹下的引用次数，说明没有其他地方引用，可以删除
 			if (totalCount === count) {
-				filesToDelete.push(url);
+				// 找到对应的文件名
+				const resource = resources.find(r => r.fileHash === hash);
+				if (resource) {
+					filesToDelete.push(resource.fileName);
+				}
 			}
 		}
 
-		// 删除所有资源记录（只删除当前用户的）
+		// 删除所有资源记录
 	await prisma.textureResource.deleteMany({
 		where: {
-			userId: authResult.user.id,
-			OR: [
-				{ filePath: { startsWith: `${folder.path}.` } },
-				{ filePath: folder.path },
-			],
+			userId: user.id,
+			folderId: {
+				in: folderIds,
+			},
 		},
 	});
 
 	// 删除所有子文件夹（只删除当前用户的）
 	await prisma.virtualFolder.deleteMany({
 		where: {
-			userId: authResult.user.id,
+			userId: user.id,
 			path: {
 				startsWith: `${folder.path}.`,
 			},
@@ -102,18 +99,15 @@ export async function POST(request: NextRequest) {
 
 		// 删除物理文件
 		let deletedFilesCount = 0;
-		for (const url of filesToDelete) {
-			const fileName = url.split('/').pop();
-			if (fileName) {
-				const uploadDir = join(process.cwd(), 'data', 'uploads', 'textures');
-				const filePath = join(uploadDir, fileName);
-				if (existsSync(filePath)) {
-					try {
-						await unlink(filePath);
-						deletedFilesCount++;
-					} catch (error) {
-						console.error(`删除文件失败: ${filePath}`, error);
-					}
+		for (const fileName of filesToDelete) {
+			const uploadDir = join(process.cwd(), 'data', 'uploads', 'textures');
+			const filePath = join(uploadDir, fileName);
+			if (existsSync(filePath)) {
+				try {
+					await unlink(filePath);
+					deletedFilesCount++;
+				} catch (error) {
+					console.error(`删除文件失败: ${filePath}`, error);
 				}
 			}
 		}
@@ -132,4 +126,4 @@ export async function POST(request: NextRequest) {
 		console.error('清空文件夹失败:', error);
 		return NextResponse.json({ success: false, error: '清空文件夹失败' }, { status: 500 });
 	}
-}
+});

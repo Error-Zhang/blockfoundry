@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Card, Tree } from 'antd';
 import { ExpandOutlined, ShrinkOutlined } from '@ant-design/icons';
-import { ContextMenuItem, DragInfo, TreeNode, TreeNodeType } from './types';
+import { ContextMenuItem, DragInfo, TreeNode } from './types';
 import { ContextMenu, TreeNodeTitle } from './components';
 import { findNode, getAllExpandableKeys, useContextMenu, useNodeEdit, useResizable } from './hooks';
 import styles from './FileTree.module.scss';
@@ -12,7 +12,7 @@ export interface FileTreeProps<T = any> {
 
 	// 选中状态
 	selectedKeys?: string[];
-	onSelect?: (keys: string[], node: TreeNode<T> | null) => void;
+	onSelect?: (keys: string[], node: TreeNode<T>) => void;
 
 	// 展开状态
 	expandedKeys?: string[];
@@ -20,7 +20,7 @@ export interface FileTreeProps<T = any> {
 	defaultExpandAll?: boolean;
 
 	// 右键菜单
-	contextMenuItems?: (nodeType: TreeNodeType, node: TreeNode<T>) => ContextMenuItem[];
+	contextMenuItems?: (node: TreeNode<T>) => ContextMenuItem[];
 	onContextMenuAction?: (action: string, node: TreeNode<T>) => void;
 
 	// 节点编辑
@@ -124,15 +124,12 @@ export function FileTree<T = any>({
 								if (onNodeEdit) {
 									const success = await onNodeEdit(node, editingValue);
 									if (success) {
-										cancelEdit();
+										cancelEdit(node);
 									}
-								} else {
-									cancelEdit();
 								}
 							}}
 							onEditCancel={() => {
-								node.isEditing = false;
-								cancelEdit();
+								cancelEdit(node);
 							}}
 							onContextMenu={(e) => showContextMenu(e, node.key)}
 							onDoubleClick={() => startEdit(node.key, node.title)}
@@ -155,8 +152,8 @@ export function FileTree<T = any>({
 	const handleSelect = useCallback(
 		(keys: React.Key[], info: any) => {
 			setSelectedKeys(keys);
-			const nodeData = info.node?.nodeData as TreeNode<T> | undefined;
-			onSelect?.(keys as string[], nodeData || null);
+			const nodeData = info.node?.nodeData as TreeNode<T>;
+			onSelect?.(keys as string[], nodeData);
 		},
 		[onSelect]
 	);
@@ -240,7 +237,7 @@ export function FileTree<T = any>({
 	const currentContextMenuItems = selectedNodeKey
 		? (() => {
 				const node = findNode(treeData, selectedNodeKey);
-				return node && contextMenuItems ? contextMenuItems(node.nodeType, node) : [];
+				return node && contextMenuItems ? contextMenuItems(node) : [];
 			})()
 		: [];
 

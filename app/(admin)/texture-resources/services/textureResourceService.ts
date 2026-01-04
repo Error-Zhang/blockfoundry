@@ -2,20 +2,20 @@
  * 纹理资源 API 服务
  */
 
-import { ApiResponse, createFormData, del, get, put, upload } from '@/lib/api';
+import { ApiResponse, createFormData, del, get, post, put, upload } from '@/lib/api';
 import type { TextureResource } from '../lib/types';
 
 /**
  * 获取纹理资源列表
  */
-export async function getTextureResources(folderPath?: string): Promise<ApiResponse<TextureResource[]>> {
-	return get<TextureResource[]>('/api/texture-resources', folderPath ? { folderPath } : undefined);
+export async function getTextureResources(folderId?: string) {
+	return get<{ totalCount: number; resources: TextureResource[] }>('/api/texture-resources', { folderId });
 }
 
 /**
  * 获取单个纹理资源
  */
-export async function getTextureResource(id: string): Promise<ApiResponse<TextureResource>> {
+export async function getTextureResource(id: string) {
 	return get<TextureResource>(`/api/texture-resources/${id}`);
 }
 
@@ -28,7 +28,7 @@ export interface CreateTextureResourceParams {
 	description?: string;
 	tags?: string[];
 	isPublic: boolean;
-	folderPath?: string;
+	folderId?: string;
 }
 
 export async function createTextureResource(params: CreateTextureResourceParams | any): Promise<ApiResponse<TextureResource>> {
@@ -38,7 +38,7 @@ export async function createTextureResource(params: CreateTextureResourceParams 
 		.append('description', params.description || '')
 		.append('tags', params.tags || [])
 		.append('isPublic', params.isPublic)
-		.append('folderPath', params.folderPath || '')
+		.append('folderId', params.folderId || '')
 		.build();
 
 	return upload<TextureResource>('/api/texture-resources', formData);
@@ -63,12 +63,12 @@ export async function deleteTextureResource(id: string): Promise<ApiResponse<voi
  */
 export async function batchUploadTextureResources(
 	files: File[],
-	folderPath?: string,
+	folderId?: string,
 	onProgress?: (progress: number) => void
 ): Promise<ApiResponse<TextureResource[]>> {
 	const formData = createFormData()
 		.appendFiles('files', files)
-		.append('folderPath', folderPath || '')
+		.append('folderId', folderId || '')
 		.build();
 
 	return upload<TextureResource[]>('/api/texture-resources/batch', formData, onProgress);
@@ -84,16 +84,10 @@ export async function getTags() {
 /**
  * 复制纹理资源
  */
-export async function copyTextureResource(id: string, newFilePath: string): Promise<ApiResponse<TextureResource>> {
-	const response = await fetch('/api/texture-resources', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			action: 'copy',
-			sourceId: id,
-			filePath: newFilePath,
-		}),
+export async function copyTextureResource(id: string, targetFolderId?: string): Promise<ApiResponse<TextureResource>> {
+	return await post<TextureResource>('/api/texture-resources', {
+		action: 'copy',
+		sourceId: id,
+		targetFolderId,
 	});
-
-	return response.json();
 }

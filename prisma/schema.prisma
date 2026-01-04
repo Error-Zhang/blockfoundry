@@ -6,6 +6,10 @@ generator client {
   engineType = "library"
 }
 
+datasource db {
+  provider = "sqlite"
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique
@@ -34,41 +38,44 @@ model Resource {
 
 // 纹理资源模型
 model TextureResource {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
-  description String   @default("")
-  fileName    String
-  filePath    String   @unique
-  originalUrl String
+  description String          @default("")
+  fileName    String          // 实际存储的文件名
+  fileHash    String          // 文件哈希值,用于去重
   width       Int
   height      Int
   format      String
   fileSize    Int
-  isPublic    Boolean  @default(true)
-  tags        String   @default("") // JSON string array
+  isPublic    Boolean         @default(true)
+  tags        String          @default("") // JSON string array
+  folderId    String?         // 关联虚拟文件夹
   userId      Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  usageCount  Int      @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  usageCount  Int             @default(0)
 
-  user User @relation("UserTextureResources", fields: [userId], references: [id], onDelete: Cascade)
+  user   User           @relation("UserTextureResources", fields: [userId], references: [id], onDelete: Cascade)
+  folder VirtualFolder? @relation("FolderTextures", fields: [folderId], references: [id], onDelete: SetNull)
 
-  @@index([filePath])
+  @@index([folderId])
+  @@index([fileHash])
   @@index([isPublic])
   @@index([userId])
 }
 
 // 虚拟文件夹模型
 model VirtualFolder {
-  id        String          @id @default(uuid())
+  id        String             @id @default(uuid())
   name      String
-  path      String          @unique // 虚拟路径，如 "textures.blocks.stone"
+  path      String             @unique // 虚拟路径，如 "textures.blocks.stone"
   parentId  String?
-  userId    Int // 关联用户ID
-  parent    VirtualFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children  VirtualFolder[] @relation("FolderHierarchy")
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  userId    Int                // 关联用户ID
+  parent    VirtualFolder?     @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  VirtualFolder[]    @relation("FolderHierarchy")
+  textures  TextureResource[]  @relation("FolderTextures")
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
   user User @relation("UserVirtualFolders", fields: [userId], references: [id], onDelete: Cascade)
 
