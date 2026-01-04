@@ -19,6 +19,6 @@ export interface TextureResource {
 	usageCount: number;
 	isPublic: boolean;
 	// 前端计算字段
-	url?: string; // 文件访问URL，由前端根据fileName生成
+	url: string; // 文件访问URL，由前端根据fileName生成
 	folderPath?: string; // 文件夹路径，由前端根据folderId查询得到
 }
