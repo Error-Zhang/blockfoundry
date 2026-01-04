@@ -55,7 +55,7 @@ export const GET = withAuthHandler(async (request: NextRequest, context, user) =
 			folderIds = await getAllSubfolderIds(folderId, user.id);
 		}
 
-		// 从数据库获取纹理资源列表（只获取当前用户的资源）
+		// 从数据库获取纹理资源列表
 		const resources = await prisma.textureResource.findMany({
 			where: {
 				userId: user.id,
@@ -81,7 +81,7 @@ export const GET = withAuthHandler(async (request: NextRequest, context, user) =
 			...resource,
 			tags: resource.tags ? JSON.parse(resource.tags) : [],
 			url: generateFileUrl(resource.fileName),
-			folderPath: resource.folder?.path || null,
+			folderPath: resource.folder?.path,
 			createdAt: resource.createdAt.toISOString().split('T')[0],
 			updatedAt: resource.updatedAt.toISOString().split('T')[0],
 		}));

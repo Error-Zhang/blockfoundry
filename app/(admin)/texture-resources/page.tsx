@@ -10,12 +10,7 @@ import PreviewModal from './components/PreviewModal';
 import BatchUploadModal from './components/BatchUploadModal';
 import { TextureResource } from './lib/types';
 import { downloadTextureResource } from './lib/utils';
-import {
-	createTextureResource,
-	deleteTextureResource,
-	getTextureResources,
-	updateTextureResource
-} from './services/textureResourceService';
+import { createTextureResource, deleteTextureResource, getTextureResources, updateTextureResource } from './services/textureResourceService';
 import styles from '../../styles/textureResourceManagement.module.scss';
 import { CloudUploadOutlined, FileImageOutlined, FolderOutlined, TagsOutlined } from '@ant-design/icons';
 import { useAsyncAction } from '@/app/hooks/useAsyncAction';
