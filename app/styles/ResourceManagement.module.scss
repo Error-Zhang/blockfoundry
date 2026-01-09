@@ -1,15 +1,15 @@
-.textureResourceManagement {
+.management {
   .statisticsCards {
     transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-    
+
     &.hidden {
       max-height: 0;
       opacity: 0;
       margin-bottom: 0;
       transform: translateY(-20px);
     }
-    
+
     &.visible {
       max-height: 500px;
       opacity: 1;
@@ -28,10 +28,10 @@
     overflow: hidden;
     flex-shrink: 0;
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    
+    opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+
     &.hidden {
       width: 0 !important;
       min-width: 0 !important;
@@ -40,18 +40,18 @@
       transform: translateX(-20px);
       pointer-events: none;
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                  opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                  transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                  margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+      margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     &.visible {
       opacity: 1;
       transform: translateX(0);
       transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                  opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                  transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                  margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+      margin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
   }
 

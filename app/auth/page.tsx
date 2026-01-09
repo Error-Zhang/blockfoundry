@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, App, Button, Card, Form, Input, Space, Typography } from 'antd';
 import { LockOutlined, LoginOutlined, MailOutlined, UserAddOutlined, UserOutlined } from '@ant-design/icons';
 
-import styles from '@/app/styles/auth.module.scss';
+import styles from '@/app/styles/Auth.module.scss';
 import { login, register } from '@/app/actions/auth';
 import { userLocalStore } from '@/app/store/user.store';
 import { useAsyncAction } from '@/app/hooks/useAsyncAction';

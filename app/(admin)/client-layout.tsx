@@ -3,6 +3,7 @@
 import React, { ReactNode, useState } from 'react';
 import { Avatar, Button, Dropdown, Layout, Menu, message, Space, Typography } from 'antd';
 import {
+	AppstoreOutlined,
 	BellOutlined,
 	DashboardOutlined,
 	FileImageOutlined,
@@ -14,7 +15,7 @@ import {
 	UserOutlined,
 } from '@ant-design/icons';
 import { usePathname, useRouter } from 'next/navigation';
-import styles from '@/app/styles/adminLayout.module.scss';
+import styles from '@/app/styles/AdminLayout.module.scss';
 import type { Session } from 'next-auth';
 
 const { Header, Sider, Content } = Layout;
@@ -30,6 +31,16 @@ const menuItems = [
 		key: '/texture-resources',
 		icon: <FileImageOutlined />,
 		label: '纹理资源管理',
+	},
+	{
+		key: '/materials',
+		icon: <PictureOutlined />,
+		label: '材质管理',
+	},
+	{
+		key: '/blocks',
+		icon: <AppstoreOutlined />,
+		label: '方块管理',
 	},
 	{
 		key: '/texture-atlas',

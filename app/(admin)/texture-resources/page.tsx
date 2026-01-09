@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { App, Form } from 'antd';
-import StatisticsCards from './components/StatisticsCards';
+import StatisticsCards from '@/app/components/common/StatisticsCards/StatisticsCards';
 import DirectoryTree from './components/DirectoryTree';
 import ResourceTable from './components/ResourceTable';
 import EditModal from './components/EditModal';
@@ -10,8 +10,13 @@ import PreviewModal from './components/PreviewModal';
 import BatchUploadModal from './components/BatchUploadModal';
 import { TextureResource } from './lib/types';
 import { downloadTextureResource } from './lib/utils';
-import { createTextureResource, deleteTextureResource, getTextureResources, updateTextureResource } from './services/textureResourceService';
-import styles from '../../styles/textureResourceManagement.module.scss';
+import {
+	createTextureResource,
+	deleteTextureResource,
+	getTextureResources,
+	updateTextureResource
+} from './services/textureResourceService';
+import styles from '../../styles/ResourceManagement.module.scss';
 import { CloudUploadOutlined, FileImageOutlined, FolderOutlined, TagsOutlined } from '@ant-design/icons';
 import { useAsyncAction } from '@/app/hooks/useAsyncAction';
 
@@ -194,7 +199,7 @@ export default function TextureResourceManagementPage() {
 	];
 
 	return (
-		<div className={styles.textureResourceManagement}>
+		<div className={styles.management}>
 			{/* 统计卡片 */}
 			<div className={`${styles.statisticsCards} ${isExpanded ? styles.hidden : styles.visible}`}>
 				<StatisticsCards cardConfigs={cardConfigs} />

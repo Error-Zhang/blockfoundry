@@ -9,7 +9,7 @@ type ApiResponsePromise<T> = Promise<ApiResponse<T>>;
  */
 export interface FileManagerApiService<TFile, TFolder> {
 	// 文件夹操作
-	getFolders: () => ApiResponsePromise<TFolder[]>;
+	getFolders: (parentId?: string) => ApiResponsePromise<TFolder[]>;
 	createFolder: (name: string, parentId: string) => ApiResponsePromise<TFolder>;
 	renameFolder: (id: string, name: string) => ApiResponsePromise<TFolder>;
 	deleteFolder: (id: string) => ApiResponsePromise<void>;

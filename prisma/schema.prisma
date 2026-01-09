@@ -21,6 +21,8 @@ model User {
   resources        Resource[]        @relation("UserResources")
   textureResources TextureResource[] @relation("UserTextureResources")
   virtualFolders   VirtualFolder[]   @relation("UserVirtualFolders")
+  materials        Material[]        @relation("UserMaterials")
+  blocks           Block[]           @relation("UserBlocks")
 }
 
 model Resource {
@@ -69,11 +71,13 @@ model VirtualFolder {
   id        String             @id @default(uuid())
   name      String
   path      String             @unique // 虚拟路径，如 "textures.blocks.stone"
+  category  String             @default("texture") // texture | block | material
   parentId  String?
   userId    Int                // 关联用户ID
   parent    VirtualFolder?     @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children  VirtualFolder[]    @relation("FolderHierarchy")
   textures  TextureResource[]  @relation("FolderTextures")
+  blocks    Block[]            @relation("FolderBlocks")
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
@@ -82,4 +86,50 @@ model VirtualFolder {
   @@index([path])
   @@index([parentId])
   @@index([userId])
+  @@index([category])
 }
+
+// 材质模型
+model Material {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  type        String   @default("standard") // standard, transparent, emissive, etc.
+  properties  String   @default("{}") // JSON: {opacity, metallic, roughness, emissive, etc.}
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation("UserMaterials", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+}
+
+// 方块模型
+model Block {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @default("")
+  folderId    String?  // 关联虚拟文件夹
+  // 渲染属性
+  renderType  String   @default("cube") // none, cube, cross, model, fluid
+  renderLayer String   @default("solid") // solid, cutout, translucent
+  // 纹理配置 (JSON)
+  textures    String   @default("{}") // BlockTextures JSON
+  // 模型配置 (JSON)
+  model       String?  // BlockModel JSON
+  // 动画配置 (JSON)
+  animation   String?  // BlockAnimation JSON
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User           @relation("UserBlocks", fields: [userId], references: [id], onDelete: Cascade)
+  folder VirtualFolder? @relation("FolderBlocks", fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([folderId])
+}
+
+

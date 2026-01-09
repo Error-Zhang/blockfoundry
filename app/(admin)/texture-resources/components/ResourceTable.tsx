@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { TextureResource } from '../lib/types';
-import styles from '../../../styles/resourceTable.module.scss';
+import styles from '../../../styles/ResourceTable.module.scss';
 
 interface ResourceTableProps {
 	resources: TextureResource[];

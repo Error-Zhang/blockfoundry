@@ -141,9 +141,6 @@ export const PUT = withAuthHandler(async (request, { params }, user) => {
 			{ success: false, error: errorMessage },
 			{
 				status: 500,
-				headers: {
-					'Content-Type': 'application/json',
-				},
 			}
 		);
 	}
@@ -190,17 +187,10 @@ export const DELETE = withAuthHandler(async (request, { params }, user) => {
 			where: { id },
 		});
 
-		return NextResponse.json(
-			{
-				success: true,
-				message: shouldDeleteFile ? '删除成功' : '记录已删除（文件仍被其他记录引用）',
-			},
-			{
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			}
-		);
+		return NextResponse.json({
+			success: true,
+			message: '删除成功',
+		});
 	} catch (error) {
 		console.error('删除纹理资源失败:', error);
 		const errorMessage = error instanceof Error ? error.message : '删除纹理资源失败';
@@ -208,9 +198,6 @@ export const DELETE = withAuthHandler(async (request, { params }, user) => {
 			{ success: false, error: errorMessage },
 			{
 				status: 500,
-				headers: {
-					'Content-Type': 'application/json',
-				},
 			}
 		);
 	}

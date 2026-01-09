@@ -12,7 +12,7 @@ import {
 	moveVirtualFolder,
 	renameVirtualFolder,
 	VirtualFolder,
-} from '../services/virtualFolderService';
+} from '@/app/services/virtualFolderService';
 import { copyTextureResource, createTextureResource, deleteTextureResource, updateTextureResource } from '../services/textureResourceService';
 import { FileManagerApiService, GenericFileManager } from '@/app/components/common/FileTree';
 
@@ -28,8 +28,8 @@ interface DirectoryTreeProps {
 // 创建 API 服务适配器
 const createTextureApiService = (): FileManagerApiService<TextureResource, VirtualFolder> => ({
 	// 文件夹操作
-	getFolders: getVirtualFolders,
-	createFolder: createVirtualFolder,
+	getFolders: (parentId?: string) => getVirtualFolders('texture', parentId),
+	createFolder: (name: string, parentId: string) => createVirtualFolder(name, parentId, 'texture'),
 	renameFolder: renameVirtualFolder,
 	deleteFolder: deleteVirtualFolder,
 	moveFolder: moveVirtualFolder,

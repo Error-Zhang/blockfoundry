@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {prisma} from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { withAuthHandler } from '@/lib/auth-middleware';
+import { buildPath, pathExists, updateFolderPaths } from '../../lib/folder-utils';
 
 // POST - 移动虚拟文件夹到新路径
 export const POST = withAuthHandler(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }, user) => {
@@ -28,73 +29,21 @@ export const POST = withAuthHandler(async (request: NextRequest, { params }: { p
 		}
 
 		// 计算新路径
-		let newPath: string;
-		if (targetParentId) {
-			// 获取目标父文件夹
-			const targetParent = await prisma.virtualFolder.findUnique({
-				where: { id: targetParentId, userId: user.id },
-			});
-
-			if (!targetParent) {
-				return NextResponse.json({ success: false, error: '目标父文件夹不存在' }, { status: 404 });
-			}
-
-			// 检查是否试图移动到自己的子文件夹
-			if (targetParent.path.startsWith(`${folder.path}.`)) {
-				return NextResponse.json({ success: false, error: '不能移动到自己的子文件夹' }, { status: 400 });
-			}
-
-			newPath = `${targetParent.path}.${folder.name}`;
-		} else {
-			// 移动到根目录
-			newPath = folder.name;
-		}
-
+		const newPath = await buildPath(folder.name, targetParentId, user.id);
 		const oldPath = folder.path;
 
 		// 检查新路径是否已存在
-		const existing = await prisma.virtualFolder.findFirst({
-			where: { 
-				path: newPath,
-				userId: user.id,
-			},
-		});
-
-		if (existing && existing.id !== id) {
+		if (await pathExists(newPath, user.id, id)) {
 			return NextResponse.json({ success: false, error: '目标路径已存在同名文件夹' }, { status: 400 });
 		}
 
 		// 使用事务确保数据一致性
 		await prisma.$transaction(async (tx) => {
-			// 1. 更新当前文件夹
 			await tx.virtualFolder.update({
 				where: { id },
-				data: {
-					path: newPath,
-					parentId: targetParentId,
-				},
+				data: { parentId: targetParentId },
 			});
-
-			// 2. 更新所有子文件夹的路径
-			const children = await tx.virtualFolder.findMany({
-				where: {
-					userId: user.id,
-					path: {
-						startsWith: `${oldPath}.`,
-					},
-				},
-			});
-
-			for (const child of children) {
-				const newChildPath = child.path.replace(oldPath, newPath);
-				
-				await tx.virtualFolder.update({
-					where: { id: child.id },
-					data: { 
-						path: newChildPath,
-					},
-				});
-			}
+			await updateFolderPaths(id, oldPath, newPath, user.id, tx);
 		});
 
 		// 返回更新后的文件夹

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuthHandler } from '@/lib/auth-middleware';
+import { buildPath, pathExists, updateFolderPaths } from '../lib/folder-utils';
 
 // DELETE - 删除虚拟文件夹
 export const DELETE = withAuthHandler(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }, user) => {
@@ -152,74 +153,30 @@ export const PUT = withAuthHandler(async (request: NextRequest, { params }: { pa
 		let finalPath = oldPath;
 		let finalName = folder.name;
 
-		// 如果提供了新路径，直接使用
-		if (newPath && newPath !== oldPath) {
-			finalPath = newPath;
-			// 从路径中提取名称
-			const pathParts = newPath.split('.');
-			finalName = pathParts[pathParts.length - 1];
-		}
-		// 如果只提供了新名称，构建新路径
-		else if (name && name !== folder.name) {
-			const pathParts = oldPath.split('.');
-			pathParts[pathParts.length - 1] = name;
-			finalPath = pathParts.join('.');
+		// 处理重命名
+		if (name && name !== folder.name) {
 			finalName = name;
+			finalPath = await buildPath(name, folder.parentId, user.id);
+
+			// 检查新路径是否已存在
+			if (await pathExists(finalPath, user.id, id)) {
+				return NextResponse.json({ success: false, error: '目标路径已存在' }, { status: 400 });
+			}
+		} else if (finalPath === oldPath) {
+			return NextResponse.json({ success: true, data: folder });
 		}
 
-		// 如果路径没有变化，直接返回
-		if (finalPath === oldPath && finalName === folder.name) {
-			return NextResponse.json({
-				success: true,
-				data: folder,
+		// 使用事务更新文件夹及其子文件夹
+		const updatedFolder = await prisma.$transaction(async (tx) => {
+			const updated = await tx.virtualFolder.update({
+				where: { id },
+				data: { name: finalName },
 			});
-		}
-
-		// 检查新路径是否已存在（在当前用户的文件夹中）
-		const existing = await prisma.virtualFolder.findFirst({
-			where: { 
-				path: finalPath,
-				userId: user.id,
-			},
+			await updateFolderPaths(id, oldPath, finalPath, user.id, tx);
+			return updated;
 		});
 
-		if (existing && existing.id !== id) {
-			return NextResponse.json({ success: false, error: '目标路径已存在' }, { status: 400 });
-		}
-
-		// 更新文件夹
-		const updatedFolder = await prisma.virtualFolder.update({
-			where: { id },
-			data: {
-				name: finalName,
-				path: finalPath,
-			},
-		});
-
-		// 更新所有子文件夹的路径（只更新当前用户的）
-		const children = await prisma.virtualFolder.findMany({
-			where: {
-				userId: user.id,
-				path: {
-					startsWith: `${oldPath}.`,
-				},
-			},
-		});
-
-		for (const child of children) {
-			const newChildPath = child.path.replace(oldPath, finalPath);
-			await prisma.virtualFolder.update({
-				where: { id: child.id },
-				data: { path: newChildPath },
-			});
-		}
-
-		// 注意：资源不需要更新路径，因为它们通过 folderId 关联，文件夹ID不变
-
-		return NextResponse.json({
-			success: true,
-			data: updatedFolder,
-		});
+		return NextResponse.json({ success: true, data: updatedFolder });
 	} catch (error) {
 		console.error('更新文件夹失败:', error);
 		return NextResponse.json({ success: false, error: '更新文件夹失败' }, { status: 500 });

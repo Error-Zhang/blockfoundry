@@ -1,16 +1,15 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Card, Col, Row, Statistic } from 'antd';
-import styles from '../../../styles/statisticsCards.module.scss';
+import styles from './StatisticsCards.module.scss';
 
 interface StatisticsCardsProps {
 	cardConfigs: {
 		key: string;
 		title: string;
 		value: number | string;
-		prefix?: React.ReactNode;
+		prefix?: ReactNode;
 		suffix?: string;
 	}[];
-	// 每行的间距
 	gutter?: number;
 }
 

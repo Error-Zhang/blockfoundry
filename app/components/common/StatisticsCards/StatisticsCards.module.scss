@@ -1,0 +1,27 @@
+.statisticsCards {
+	margin-bottom: 24px;
+
+	:global {
+		.ant-card {
+			border-radius: 8px;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+			transition: all 0.3s ease;
+
+			&:hover {
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+				transform: translateY(-2px);
+			}
+		}
+
+		.ant-statistic-title {
+			color: rgba(0, 0, 0, 0.65);
+			font-size: 14px;
+		}
+
+		.ant-statistic-content {
+			color: rgba(0, 0, 0, 0.85);
+			font-size: 24px;
+			font-weight: 600;
+		}
+	}
+}

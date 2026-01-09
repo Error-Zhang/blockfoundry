@@ -1,7 +1,7 @@
 import React from 'react';
-import { Modal, Row, Col, Descriptions, Divider, Space, Tag, Image } from 'antd';
+import { Col, Descriptions, Divider, Image, Modal, Row, Space, Tag } from 'antd';
 import { TextureResource } from '../lib/types';
-import styles from '../../../styles/modals.module.scss';
+import styles from '../../../styles/Modals.module.scss';
 
 interface PreviewModalProps {
 	visible: boolean;
@@ -9,11 +9,7 @@ interface PreviewModalProps {
 	onCancel: () => void;
 }
 
-const PreviewModal: React.FC<PreviewModalProps> = ({
-	visible,
-	resource,
-	onCancel,
-}) => {
+const PreviewModal: React.FC<PreviewModalProps> = ({ visible, resource, onCancel }) => {
 	return (
 		<Modal
 			title={`预览纹理: ${resource?.name}`}
@@ -39,9 +35,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({
 									{resource.width} × {resource.height}
 								</Descriptions.Item>
 								<Descriptions.Item label="格式">{resource.format}</Descriptions.Item>
-								<Descriptions.Item label="文件大小">
-									{(resource.fileSize / 1024).toFixed(1)} KB
-								</Descriptions.Item>
+								<Descriptions.Item label="文件大小">{(resource.fileSize / 1024).toFixed(1)} KB</Descriptions.Item>
 								<Descriptions.Item label="使用次数">{resource.usageCount}</Descriptions.Item>
 								<Descriptions.Item label="创建时间">{resource.createdAt}</Descriptions.Item>
 								<Descriptions.Item label="更新时间">{resource.updatedAt}</Descriptions.Item>

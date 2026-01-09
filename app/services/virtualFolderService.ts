@@ -1,5 +1,6 @@
 /**
- * 虚拟文件夹 API 服务
+ * 统一的虚拟文件夹 API 服务
+ * 支持通过 category 参数区分不同类型的文件夹（texture/block）
  */
 
 import { ApiResponse, del, get, post, put } from '@/lib/api';
@@ -8,23 +9,26 @@ export interface VirtualFolder {
 	id: string;
 	name: string;
 	path: string;
+	category?: string;
 	parentId: string;
 	createdAt: string;
 	updatedAt: string;
 }
 
+export type FolderCategory = 'texture' | 'block';
+
 /**
  * 获取虚拟文件夹列表
  */
-export async function getVirtualFolders(parentPath?: string): Promise<ApiResponse<VirtualFolder[]>> {
-	return get<VirtualFolder[]>('/api/virtual-folders', parentPath ? { parentPath } : undefined);
+export async function getVirtualFolders(category?: FolderCategory, parentId?: string): Promise<ApiResponse<VirtualFolder[]>> {
+	return get<VirtualFolder[]>('/api/virtual-folders', { category, parentId });
 }
 
 /**
  * 创建虚拟文件夹
  */
-export async function createVirtualFolder(name: string, parentId: string): Promise<ApiResponse<VirtualFolder>> {
-	return post<VirtualFolder>('/api/virtual-folders', { name, parentId });
+export async function createVirtualFolder(name: string, parentId: string, category: FolderCategory): Promise<ApiResponse<VirtualFolder>> {
+	return post<VirtualFolder>('/api/virtual-folders', { name, parentId, category });
 }
 
 /**
