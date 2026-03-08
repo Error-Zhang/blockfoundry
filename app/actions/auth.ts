@@ -64,6 +64,7 @@ export async function register(params: { username: string; email: string; passwo
 
 		return { success: true };
 	} catch (error) {
+		console.error(error);
 		return { success: false, error: '注册失败，请稍后重试' };
 	}
 }

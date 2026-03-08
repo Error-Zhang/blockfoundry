@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-	reactStrictMode: true,
+	reactStrictMode: false,
 	transpilePackages: [],
 	sassOptions: {
 		implementation: 'sass',
@@ -14,17 +14,17 @@ const nextConfig = {
 			},
 		];
 	},
-  webpack: (config, { isServer }) => {
+	webpack: (config, { isServer }) => {
 		if (isServer) {
 			config.externals.push('@libsql/client');
 		}
-		
+
 		// 忽略 README.md 文件
 		config.module.rules.push({
 			test: /\.md$/,
 			type: 'asset/source',
 		});
-		
+
 		return config;
 	},
 };

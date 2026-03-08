@@ -17,10 +17,11 @@
 
     .ant-card-body {
       padding: 0;
+      max-height: 100vh;
+      overflow-y: auto;
     }
 
     .ant-table {
-
       .ant-table-thead > tr > th {
         background-color: $color-bg-layout;
         font-weight: $font-weight-semibold;
@@ -29,6 +30,9 @@
       .ant-table-tbody > tr {
         &:hover {
           background-color: $color-bg-spotlight;
+        }
+        &.ant-table-row-selected > .ant-table-cell {
+          background-color: #f5f5f5;
         }
       }
 

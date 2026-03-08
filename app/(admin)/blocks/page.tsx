@@ -34,7 +34,7 @@ export default function BlockManagementPage() {
 	const [form] = Form.useForm();
 
 	const { loading, handle: loadBlocks } = useAsyncAction(getBlocks, {
-		onSuccess: (_, data) => {
+		onSuccess: (data) => {
 			setBlocks(data!.blocks);
 			setTotalCount(data!.totalCount);
 		},

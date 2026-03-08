@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withAuthHandler } from '@/lib/auth-middleware';
+import { apiHandler } from '@/app/api/lib/api-handler';
 
-// GET - 获取所有使用过的标签
-export const GET = withAuthHandler(async (request, context, user) => {
-	try {
-		// 从数据库获取当前用户的所有纹理资源
+export const GET = apiHandler({
+	handler: async ({ user }) => {
 		const resources = await prisma.textureResource.findMany({
 			where: {
 				userId: user.id,
@@ -15,7 +13,6 @@ export const GET = withAuthHandler(async (request, context, user) => {
 			},
 		});
 
-		// 收集所有标签
 		const allTagsSet = new Set<string>();
 		resources.forEach((resource) => {
 			if (resource.tags) {
@@ -34,7 +31,6 @@ export const GET = withAuthHandler(async (request, context, user) => {
 			}
 		});
 
-		// 转换为数组并排序
 		const allTags = Array.from(allTagsSet).sort();
 
 		return NextResponse.json({
@@ -42,11 +38,5 @@ export const GET = withAuthHandler(async (request, context, user) => {
 			data: allTags,
 			count: allTags.length,
 		});
-	} catch (error) {
-		console.error('获取标签列表失败:', error);
-		return NextResponse.json(
-			{ success: false, error: '获取标签列表失败' },
-			{ status: 500 }
-		);
-	}
+	},
 });

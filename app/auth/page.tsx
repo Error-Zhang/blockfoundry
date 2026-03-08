@@ -37,10 +37,10 @@ export default function AuthPage() {
 		}
 	}, [isLogin, form]);
 
-	const onSuccess = (params: any) => {
+	const onSuccess = (_: unknown, params: any) => {
 		userLocalStore.setCurrent(params[0]);
-		setTimeout(() => router.push('/dashboard'), 500);
-		message.success(`${isLogin ? '登陆' : '注册'}成功，即将跳转到控制台`);
+		router.push('/dashboard');
+		message.success(`${isLogin ? '登陆' : '注册'}成功`);
 	};
 
 	const {

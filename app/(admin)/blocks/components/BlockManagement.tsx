@@ -20,7 +20,7 @@ export default function BlockManagement() {
 	const [form] = Form.useForm();
 
 	const { loading, handle: loadBlocks } = useAsyncAction(getBlocks, {
-		onSuccess: (_, data) => setBlocks(data!.blocks),
+		onSuccess: (data) => setBlocks(data!.blocks),
 	});
 
 	useEffect(() => {

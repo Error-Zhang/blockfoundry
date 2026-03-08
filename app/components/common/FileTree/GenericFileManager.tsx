@@ -110,7 +110,6 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		const data = await errorHandler.executeApi(() => apiService.getFolders());
 		const root = data?.find((vf) => vf.parentId === null);
 		if (!root) return errorHandler.error('根目录不存在');
-
 		setVirtualFolders(data!);
 		setRootFolder(root);
 	};
@@ -184,6 +183,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 
 				// 找到父节点并添加
 				const parentNode = folderMap.get(vFolder.parentId || rootFolder.id);
+
 				if (parentNode) {
 					parentNode.children!.push(folderNode);
 				}
@@ -213,29 +213,39 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		});
 
 		// 添加临时新建文件夹节点
-		if (isCreatingNewFolder && rightClickedFolder) {
-			// 在当前构建的树中找到对应的父节点
-			const parentFolderId = (rightClickedFolder.data as TFolder).id;
-			const parentNode = folderMap.get(parentFolderId);
+		injectTempFolder(root);
 
-			if (parentNode) {
-				const tempFolderNode: TreeNode<TFolder> = {
+		return [root];
+	}, [files, virtualFolders, rootFolder, isCreatingNewFolder, fileIcon]);
+
+	function injectTempFolder(root: TreeNode) {
+		if (!isCreatingNewFolder || !rightClickedFolder) return;
+
+		const parentId = rightClickedFolder.data!.id;
+
+		const walk = (node: TreeNode) => {
+			if (node.data?.id === parentId) {
+				const tempNode: TreeNode = {
 					key: 'temp-new-folder',
 					title: '新文件夹',
 					nodeType: 'folder',
 					path: buildPath(rightClickedFolder.path, '新文件夹'),
 					icon: <FolderOutlined />,
-					children: [],
 					isEditing: true,
-					data: { parentId: parentFolderId } as TFolder,
+					children: [],
+					data: { parentId },
 				};
-				parentNode.children!.unshift(tempFolderNode);
+
+				// immutable 更新
+				node.children = [tempNode, ...(node.children ?? [])];
+				return;
 			}
-		}
 
-		return [root];
-	}, [files, virtualFolders, rootFolder, isCreatingNewFolder, rightClickedFolder, fileIcon]);
+			node.children?.forEach(walk);
+		};
 
+		walk(root);
+	}
 	// 首次加载自动选择根节点
 	useEffect(() => {
 		if (treeData.length && !selectedFolder) {
@@ -265,14 +275,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 
 			// 处理新建文件夹
 			if (node.key === 'temp-new-folder' && isCreatingNewFolder) {
-				const success = await folderOperations.confirmCreateFolder(newName, (node.data as TFolder).parentId);
-
-				if (success) {
-					setIsCreatingNewFolder(false);
-					setRightClickedFolder(null);
-				}
-
-				return success;
+				return await folderOperations.confirmCreateFolder(newName, (node.data as TFolder).parentId);
 			}
 
 			// 处理文件重命名
@@ -295,6 +298,12 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		},
 		[isCreatingNewFolder, rightClickedFolder, selectedFolder, treeData, virtualFolders, rootFolder, folderOperations, errorHandler]
 	);
+
+	const handleCancelNodeEdit = (node:TreeNode<TFile|TFolder>) => {
+		node.isEditing = false;
+		setIsCreatingNewFolder(false);
+		setRightClickedFolder(null);
+	};
 
 	// 处理拖拽
 	const handleDrop = useCallback(
@@ -503,6 +512,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 				onSelect={handleSelect}
 				onExpand={(keys) => setExpandedKeys(keys)}
 				onNodeEdit={handleNodeEdit}
+				onCancelNodeEdit={handleCancelNodeEdit}
 				onDrop={handleDrop}
 				contextMenuItems={buildContextMenu}
 				onContextMenuAction={handleContextMenuClick}

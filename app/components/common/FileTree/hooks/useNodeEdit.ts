@@ -12,8 +12,7 @@ export function useNodeEdit<T = any>() {
 		setEditingValue(currentValue);
 	}, []);
 
-	const cancelEdit = useCallback((node: { isEditing?: boolean }) => {
-		if (node) node.isEditing = false;
+	const cancelEdit = useCallback(() => {
 		setEditingNode(null);
 		setEditingValue('');
 	}, []);

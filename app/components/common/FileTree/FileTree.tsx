@@ -25,6 +25,7 @@ export interface FileTreeProps<T = any> {
 
 	// 节点编辑
 	onNodeEdit?: (node: TreeNode<T>, newValue: string) => Promise<boolean>;
+	onCancelNodeEdit?: (node: TreeNode<T>) => void;
 
 	// 拖拽
 	draggable?: boolean;
@@ -57,6 +58,7 @@ export function FileTree<T = any>({
 	contextMenuItems,
 	onContextMenuAction,
 	onNodeEdit,
+	onCancelNodeEdit,
 	draggable = true,
 	onDrop,
 	allowDrop,
@@ -99,7 +101,10 @@ export function FileTree<T = any>({
 		hide: hideContextMenu,
 	} = useContextMenu();
 	const { isResizing, containerRef, resizeRef, handleMouseDown } = useResizable(width, minWidth, maxWidth, onWidthChange);
-
+	const onEditCancel = (node: TreeNode<T>) => {
+		cancelEdit();
+		onCancelNodeEdit?.(node);
+	};
 	// 构建 Antd Tree 数据
 	const buildAntdTreeData = useCallback(
 		(nodes: TreeNode<T>[]): any[] => {
@@ -115,7 +120,7 @@ export function FileTree<T = any>({
 					title: (
 						<TreeNodeTitle
 							node={node}
-							isEditing={editingNode === node.key || !!node.isEditing}
+							isEditing={editingNode === node.key}
 							editingValue={editingValue}
 							onEditChange={updateValue}
 							onEditSave={async () => {
@@ -124,13 +129,11 @@ export function FileTree<T = any>({
 								if (onNodeEdit) {
 									const success = await onNodeEdit(node, editingValue);
 									if (success) {
-										cancelEdit(node);
+										onEditCancel(node);
 									}
 								}
 							}}
-							onEditCancel={() => {
-								cancelEdit(node);
-							}}
+							onEditCancel={()=>onEditCancel(node)}
 							onContextMenu={(e) => showContextMenu(e, node.key)}
 							onDoubleClick={() => startEdit(node.key, node.title)}
 							className={styles.treeNodeTitle}

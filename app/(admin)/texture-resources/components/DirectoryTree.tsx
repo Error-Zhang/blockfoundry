@@ -7,13 +7,12 @@ import {
 	copyVirtualFolder,
 	createVirtualFolder,
 	deleteVirtualFolder,
-	downloadVirtualFolder,
 	getVirtualFolders,
 	moveVirtualFolder,
 	renameVirtualFolder,
 	VirtualFolder,
 } from '@/app/services/virtualFolderService';
-import { copyTextureResource, createTextureResource, deleteTextureResource, updateTextureResource } from '../services/textureResourceService';
+import { copyTextureResource, createTextureResource, deleteTextureResource, downloadFolderResources, updateTextureResource } from '../services/textureResourceService';
 import { FileManagerApiService, GenericFileManager } from '@/app/components/common/FileTree';
 
 interface DirectoryTreeProps {
@@ -35,7 +34,7 @@ const createTextureApiService = (): FileManagerApiService<TextureResource, Virtu
 	moveFolder: moveVirtualFolder,
 	copyFolder: copyVirtualFolder,
 	clearFolder: clearVirtualFolder,
-	downloadFolder: downloadVirtualFolder,
+	downloadFolder: downloadFolderResources,
 	createFile: createTextureResource,
 	updateFile: updateTextureResource,
 	deleteFile: deleteTextureResource,

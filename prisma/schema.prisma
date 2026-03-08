@@ -23,6 +23,7 @@ model User {
   virtualFolders   VirtualFolder[]   @relation("UserVirtualFolders")
   materials        Material[]        @relation("UserMaterials")
   blocks           Block[]           @relation("UserBlocks")
+  textureAtlases   TextureAtlas[]    @relation("UserTextureAtlases")
 }
 
 model Resource {
@@ -50,15 +51,15 @@ model TextureResource {
   format      String
   fileSize    Int
   isPublic    Boolean         @default(true)
-  tags        String          @default("") // JSON string array
-  folderId    String?         // 关联虚拟文件夹
+  tags        String          @default("[]") // JSON string array
+  folderId    String         // 关联虚拟文件夹
   userId      Int
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   usageCount  Int             @default(0)
 
   user   User           @relation("UserTextureResources", fields: [userId], references: [id], onDelete: Cascade)
-  folder VirtualFolder? @relation("FolderTextures", fields: [folderId], references: [id], onDelete: SetNull)
+  folder VirtualFolder @relation("FolderTextures", fields: [folderId], references: [id], onDelete: Cascade)
 
   @@index([folderId])
   @@index([fileHash])
@@ -70,7 +71,6 @@ model TextureResource {
 model VirtualFolder {
   id        String             @id @default(uuid())
   name      String
-  path      String             @unique // 虚拟路径，如 "textures.blocks.stone"
   category  String             @default("texture") // texture | block | material
   parentId  String?
   userId    Int                // 关联用户ID
@@ -83,7 +83,6 @@ model VirtualFolder {
 
   user User @relation("UserVirtualFolders", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([path])
   @@index([parentId])
   @@index([userId])
   @@index([category])
@@ -132,4 +131,25 @@ model Block {
   @@index([folderId])
 }
 
+// 纹理图集模型
+model TextureAtlas {
+  id                String   @id @default(uuid())
+  name              String
+  width             Int
+  height            Int
+  spriteCount       Int
+  format            String   @default("PNG")
+  fileSize          Int      @default(0)
+  hash              String   @default("") // 图集文件哈希值，用于去重
+  sourceTextureIds  String   @default("[]") // JSON string array of texture resource ids
+  userId            Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation("UserTextureAtlases", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([name])
+  @@index([hash])
+}
 

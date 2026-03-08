@@ -56,6 +56,9 @@ const EditModal: React.FC<EditModalProps> = ({ visible, editingResource, form, l
 			footer={null}
 			width={480}
 			className={styles.resourceModal}
+			mask={{
+				closable: false,
+			}}
 		>
 			<Form form={form} layout="vertical" onFinish={onSubmit}>
 				{!editingResource && (
@@ -65,7 +68,7 @@ const EditModal: React.FC<EditModalProps> = ({ visible, editingResource, form, l
 							maxCount={1}
 							fileList={fileList}
 							onChange={handleFileChange}
-							beforeUpload={() => false}
+							beforeUpload={() => false} // 禁止自动上传
 							accept="image/*"
 						>
 							{fileList.length === 0 && (
@@ -90,7 +93,7 @@ const EditModal: React.FC<EditModalProps> = ({ visible, editingResource, form, l
 					<Select
 						mode="tags"
 						placeholder="输入标签，按回车添加"
-						className={styles.fullWidth}
+						style={{ width: '100%' }}
 						options={allTags.map((tag) => ({ label: tag, value: tag }))}
 					/>
 				</Form.Item>

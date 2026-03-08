@@ -30,7 +30,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ visible, resource, onCancel
 						</Col>
 						<Col span={12}>
 							<Descriptions column={1} size="small">
-								<Descriptions.Item label="文件名">{resource.fileName}</Descriptions.Item>
+								<Descriptions.Item label="图片名称">{resource.name}</Descriptions.Item>
 								<Descriptions.Item label="尺寸">
 									{resource.width} × {resource.height}
 								</Descriptions.Item>

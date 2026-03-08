@@ -1,107 +1,105 @@
-import React, { useEffect, useState } from 'react';
-import type { UploadFile } from 'antd';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Form, Select, UploadFile, Progress } from 'antd';
 import { App, Button, Modal, Space, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { batchUploadTextureResources } from '../services/textureResourceService';
+
+import { getTags } from '../services/textureResourceService';
+
+import styles from '@/app/styles/Modals.module.scss';
+import { useIngestQueue } from '@/app/(admin)/texture-resources/hooks/useIngestQueue';
+import { useBatchUpload } from '@/app/(admin)/texture-resources/hooks/useBatchUpload';
+import { VirtualList } from '@/app/(admin)/texture-resources/components/VirtualList';
+import { ImageThumb } from '@/app/(admin)/texture-resources/components/ImageThumb';
 
 interface BatchUploadModalProps {
 	visible: boolean;
 	onCancel: () => void;
-	onUpload: (resources: any[], errors?: string[]) => void;
+	onUpload: (successCount: number, fileCount: number) => void;
 	currentFolderId: string;
 }
 
 const BatchUploadModal: React.FC<BatchUploadModalProps> = ({ visible, onCancel, onUpload, currentFolderId }) => {
 	const { message } = App.useApp();
-	const [fileList, setFileList] = useState<UploadFile[]>([]);
-	const [uploading, setUploading] = useState(false);
 
+	const [tags, setTags] = useState<string[]>([]);
+	const [allTags, setAllTags] = useState<string[]>([]);
+	const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+	/**
+	 * 文件导入队列（避免一次性 setState 卡顿）
+	 */
+	const ingest = useIngestQueue();
+
+	/**
+	 * 上传逻辑
+	 */
+	const { upload, uploading, progress } = useBatchUpload({
+		fileList,
+		setFileList,
+		currentFolderId,
+		tags,
+	});
+
+	/**
+	 * 初始化标签
+	 */
 	useEffect(() => {
 		if (!visible) {
 			setFileList([]);
-			setUploading(false);
+			setTags([]);
+			ingest.reset();
+			return;
 		}
+
+		getTags().then((res) => {
+			setAllTags(res.data ?? []);
+		});
 	}, [visible]);
 
-	const handleUpload = async () => {
-		if (fileList.length === 0) return;
-		setUploading(true);
-
-		try {
-			// 初始化所有文件为上传中状态
-			const updatedFileList = fileList.map((file) => ({
-				...file,
-				status: 'uploading' as const,
-				percent: 0,
-			}));
-			setFileList([...updatedFileList]);
-
-			// 提取文件对象
-			const files = fileList.map((file) => file.originFileObj).filter((f) => f !== null && f !== undefined) as File[];
-
-			// 发送到后端，使用真实进度回调
-			const result = await batchUploadTextureResources(files, currentFolderId, (progress) => {
-				// 更新所有文件的进度
-				const progressFileList = updatedFileList.map((file) => ({
-					...file,
-					percent: progress,
-				}));
-				setFileList([...progressFileList]);
-			});
-
-			if (!result.success && !result.data) {
-				message.error(result.error || '上传失败');
+	/**
+	 * 文件列表变化
+	 */
+	const handleFileListChange = useCallback(
+		({ fileList: newFileList }: { fileList: UploadFile[] }) => {
+			if (newFileList.length <= fileList.length) {
+				setFileList(newFileList);
+				return;
 			}
 
-			// 根据后端返回的错误信息，创建文件名到错误信息的映射
-			const errorMap = new Map<string, string>();
-			(result.errors || []).forEach((err: string) => {
-				// 匹配格式: 纹理 "文件名" 错误信息
-				const match = err.match(/纹理 "(.+?)" (.+)/);
-				if (match) {
-					errorMap.set(match[1], err);
-				}
-			});
+			const added = newFileList.filter((f) => !fileList.some((x) => x.uid === f.uid));
 
-			// 标记文件状态并添加错误信息
-			const finalFileList = updatedFileList.map((file) => {
-				const fileName = file.name;
-				const errorMsg = errorMap.get(fileName);
+			if (added.length) {
+				ingest.enqueue(added, (chunk) => {
+					setFileList((prev) => {
+						const next = [...prev];
 
-				if (errorMsg) {
-					// 有错误的文件
-					return {
-						...file,
-						status: 'error' as const,
-						percent: 100,
-						error: { message: <span style={{ color: 'black' }}>{errorMsg}</span> },
-					};
-				} else {
-					// 成功的文件
-					return {
-						...file,
-						status: 'done' as const,
-						percent: 100,
-					};
-				}
-			});
-			setFileList(finalFileList);
+						for (const f of chunk) {
+							if (!next.some((x) => x.uid === f.uid)) {
+								next.push(f);
+							}
+						}
 
-			// 延迟一下让用户看到100%的进度
-			await new Promise((resolve) => setTimeout(resolve, 500));
+						return next;
+					});
+				});
+			}
+		},
+		[fileList]
+	);
 
-			// 调用回调，传递后端返回的资源数据
-			onUpload(result.data || [], result.errors);
-		} catch (error) {
-			console.error('批量上传失败:', error);
-			// 标记所有文件为失败
-			const updatedFileList = fileList.map((file) => ({
-				...file,
-				status: 'error' as const,
-			}));
-			setFileList(updatedFileList);
-		} finally {
-			setUploading(false);
+	/**
+	 * 执行上传
+	 */
+	const handleUpload = async () => {
+		try {
+			const result = await upload();
+
+			if (result) {
+				onUpload(result.successCount, result.failCount);
+			}
+		} catch (err) {
+			console.error(err);
+			message.error('执行出现错误');
 		}
 	};
 
@@ -110,35 +108,119 @@ const BatchUploadModal: React.FC<BatchUploadModalProps> = ({ visible, onCancel, 
 			title="批量上传纹理"
 			open={visible}
 			onCancel={onCancel}
+			mask={{ closable: false }}
+			width={600}
 			footer={
 				<div style={{ textAlign: 'right' }}>
 					<Space>
 						<Button onClick={onCancel}>取消</Button>
-						<Button type="primary" onClick={handleUpload} loading={uploading} disabled={fileList.length === 0}>
+
+						<Button type="primary" onClick={handleUpload} loading={uploading} disabled={!fileList.length || ingest.ingesting}>
 							开始上传
 						</Button>
 					</Space>
 				</div>
 			}
-			width={600}
 		>
-			<Upload.Dragger
-				multiple
-				fileList={fileList}
-				onChange={({ fileList: newFileList }) => setFileList(newFileList)}
-				beforeUpload={() => false}
-				accept="image/*"
-				listType="picture"
-				showUploadList={{
-					showRemoveIcon: true,
-				}}
-			>
-				<p className="ant-upload-drag-icon">
-					<UploadOutlined />
-				</p>
-				<p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-				<p className="ant-upload-hint">支持批量上传多个纹理文件，文件名将作为纹理名称，默认状态为可用</p>
-			</Upload.Dragger>
+			<Form layout="vertical" colon={false} className={styles.batchUpload}>
+				{/* 标签 */}
+				<Form.Item label="标签">
+					<Select
+						mode="tags"
+						placeholder="输入标签，按回车添加"
+						value={tags}
+						onChange={setTags}
+						options={allTags.map((tag) => ({
+							label: tag,
+							value: tag,
+						}))}
+					/>
+				</Form.Item>
+
+				{/* 上传进度 */}
+				{uploading && (
+					<Form.Item label="上传进度" className={styles.progressRow}>
+						<Progress percent={progress} size="small" />
+					</Form.Item>
+				)}
+
+				{/* 导入进度 */}
+				{ingest.ingesting && (
+					<Form.Item label="正在导入文件" className={styles.ingestRow}>
+						<Progress percent={ingest.total ? Math.floor((ingest.processed / ingest.total) * 100) : 0} size="small" />
+					</Form.Item>
+				)}
+
+				{/* 文件选择 */}
+				<Form.Item label="选择文件">
+					<Upload.Dragger
+						multiple
+						fileList={fileList}
+						onChange={handleFileListChange}
+						beforeUpload={() => false}
+						accept="image/*"
+						listType="picture"
+						showUploadList={false}
+						previewFile={() => Promise.resolve('')}
+					>
+						<p className="ant-upload-drag-icon">
+							<UploadOutlined />
+						</p>
+
+						<p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+
+						<p className="ant-upload-hint">支持批量上传多个纹理文件，文件名将作为纹理名称</p>
+					</Upload.Dragger>
+				</Form.Item>
+
+				{/* 文件列表 */}
+				{fileList.length > 0 && (
+					<Form.Item label="文件列表">
+						<div className={styles.listWrapper}>
+							<VirtualList
+								items={fileList}
+								height={320}
+								itemHeight={72}
+								className={styles.virtualList}
+								renderItem={(file) => (
+									<div className={styles.uploadListItem}>
+										<div className={styles.itemRow}>
+											<div className={styles.itemLabel}>
+												<ImageThumb file={file} />
+											</div>
+
+											<div className={styles.itemContent}>
+												<div className={styles.itemName}>{file.name}</div>
+
+												<div className={styles.itemStatus}>
+													{file.status === 'uploading' && '上传中'}
+
+													{file.status === 'done' && '已完成'}
+
+													{file.error && (
+														<span className={styles.itemError}>
+															上传失败：
+															{file.error?.message ?? '未知原因'}
+														</span>
+													)}
+												</div>
+											</div>
+
+											<Button
+												size="small"
+												className={styles.itemRemove}
+												onClick={() => setFileList((prev) => prev.filter((f) => f.uid !== file.uid))}
+											>
+												移除
+											</Button>
+										</div>
+									</div>
+								)}
+							/>
+						</div>
+					</Form.Item>
+				)}
+			</Form>
 		</Modal>
 	);
 };

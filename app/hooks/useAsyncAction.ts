@@ -5,9 +5,9 @@ import { App } from 'antd';
 export function useAsyncAction<Fn extends (...args: any[]) => Promise<ApiResponse>>(
 	action: Fn,
 	options?: {
-		showSuccessMessage?: boolean;
-		showErrorMessage?: boolean;
-		onSuccess?: (params: Parameters<Fn>, data: Awaited<ReturnType<Fn>>['data']) => void;
+		showSuccessMessage?: boolean | string;
+		showErrorMessage?: boolean | string;
+		onSuccess?: (data: Awaited<ReturnType<Fn>>['data'], params: Parameters<Fn>) => void;
 		onError?: (data: Awaited<ReturnType<Fn>>['data']) => void;
 	}
 ) {
@@ -24,12 +24,12 @@ export function useAsyncAction<Fn extends (...args: any[]) => Promise<ApiRespons
 			const result = await action(...args);
 
 			if (result.success) {
-				onSuccess?.(args, result.data);
-				showSuccessMessage && message.success('操作成功！');
+				onSuccess?.(result.data, args);
+				showSuccessMessage && message.success(typeof showSuccessMessage === 'string' ? showSuccessMessage : '操作成功！');
 			} else {
-				setError(result.error || '请求被拒绝');
+				setError(result.error || '未知错误');
 				onError?.(result.data);
-				showErrorMessage && message.error(error);
+				showErrorMessage && message.error(typeof showErrorMessage === 'string' ? showErrorMessage : result.error || '未知错误');
 			}
 		} catch (err) {
 			message.error('服务器错误');

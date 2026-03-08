@@ -2,13 +2,13 @@
  * 纹理资源 API 服务
  */
 
-import { ApiResponse, createFormData, del, get, post, put, upload } from '@/lib/api';
+import { ApiResponse, createFormData, del, FormDataBuilder, get, post, put, upload } from '@/lib/api';
 import type { TextureResource } from '../lib/types';
 
 /**
  * 获取纹理资源列表
  */
-export async function getTextureResources(folderId?: string) {
+export async function getTextureResources(folderId: string) {
 	return get<{ totalCount: number; resources: TextureResource[] }>('/api/texture-resources', { folderId });
 }
 
@@ -25,22 +25,13 @@ export async function getTextureResource(id: string) {
 export interface CreateTextureResourceParams {
 	file: File;
 	name: string;
-	description?: string;
 	tags?: string[];
 	isPublic: boolean;
-	folderId?: string;
+	folderId: string;
 }
 
 export async function createTextureResource(params: CreateTextureResourceParams | any): Promise<ApiResponse<TextureResource>> {
-	const formData = createFormData()
-		.appendFile('file', params.file)
-		.append('name', params.name)
-		.append('description', params.description || '')
-		.append('tags', params.tags || [])
-		.append('isPublic', params.isPublic)
-		.append('folderId', params.folderId || '')
-		.build();
-
+	const formData = createFormData(params);
 	return upload<TextureResource>('/api/texture-resources', formData);
 }
 
@@ -63,15 +54,26 @@ export async function deleteTextureResource(id: string): Promise<ApiResponse<voi
  */
 export async function batchUploadTextureResources(
 	files: File[],
-	folderId?: string,
+	params: {
+		folderId: string;
+		tags?: string[];
+	},
 	onProgress?: (progress: number) => void
-): Promise<ApiResponse<TextureResource[]>> {
-	const formData = createFormData()
-		.appendFiles('files', files)
-		.append('folderId', folderId || '')
-		.build();
-
-	return upload<TextureResource[]>('/api/texture-resources/batch', formData, onProgress);
+) {
+	const formData = createFormData({
+		files,
+		...params,
+	});
+	return upload<{
+		successCount: number;
+		failCount: number;
+		results: {
+			success: boolean;
+			error?: string;
+			data: TextureResource;
+			fileName: string;
+		}[];
+	}>('/api/texture-resources/batch', formData, onProgress);
 }
 
 /**
@@ -90,4 +92,21 @@ export async function copyTextureResource(id: string, targetFolderId?: string): 
 		sourceId: id,
 		targetFolderId,
 	});
+}
+
+/**
+ * 下载文件夹中的纹理资源
+ */
+export async function downloadFolderResources(folderId: string): Promise<Blob> {
+	const response = await fetch('/api/texture-resources/download', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ folderId }),
+	});
+
+	if (!response.ok) {
+		throw new Error('下载失败');
+	}
+
+	return response.blob();
 }

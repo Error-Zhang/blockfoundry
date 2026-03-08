@@ -1,96 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { apiHandler } from '@/app/api/lib/api-handler';
+import { SuccessResponse } from '@/app/api/lib/response';
+import { FolderRepo } from '@/app/api/virtual-folders/folder.repo';
+import { getAllSubfolderIds } from '@/app/api/virtual-folders/service';
 import { prisma } from '@/lib/prisma';
-import { withAuthHandler } from '@/lib/auth-middleware';
-import { buildPath, pathExists } from './lib/folder-utils';
 
-// GET - 获取虚拟文件夹列表
-export const GET = withAuthHandler(async (request: NextRequest, context, user) => {
-	try {
-		const { searchParams } = new URL(request.url);
-		const parentId = searchParams.get('parentId') || undefined;
-		const category = searchParams.get('category');
-
-		if (!category) {
-			return NextResponse.json({ success: false, error: '文件夹分类不能为空' }, { status: 400 });
-		}
-
-		// 检查是否存在根节点，如果不存在则自动创建
-		const rootFolder = await prisma.virtualFolder.findFirst({
-			where: {
-				userId: user.id,
-				parentId: null,
-				category,
-			},
-		});
-
-		if (!rootFolder) {
-			// 创建根节点
-			await prisma.virtualFolder.create({
-				data: {
-					name: category === 'block' ? 'blocks' : 'textures',
-					path: category === 'block' ? 'blocks' : 'textures',
-					category,
-					parentId: null,
-					userId: user.id,
-				},
-			});
-		}
-
-		const folders = await prisma.virtualFolder.findMany({
-			where: {
-				userId: user.id,
-				category,
-				parentId,
-			},
-			orderBy: {
-				path: 'asc',
-			},
-		});
-
-		return NextResponse.json({
-			success: true,
-			data: folders,
-		});
-	} catch (error) {
-		console.error('获取文件夹失败:', error);
-		return NextResponse.json({ success: false, error: '获取文件夹失败' }, { status: 500 });
-	}
+const GetFoldersQuery = z.object({
+	parentId: z.string().optional(),
+	category: z.string().min(1, '文件夹分类不能为空'),
 });
 
-// POST - 创建虚拟文件夹
-export const POST = withAuthHandler(async (request: NextRequest, context, user) => {
-	try {
-		const body = await request.json();
-		const { name, parentId, category = 'texture' } = body;
+const CreateFolderBody = z.object({
+	name: z.string().min(1, '文件夹名称不能为空'),
+	parentId: z.string().optional(),
+	category: z.string(),
+});
 
-		if (!name) {
-			return NextResponse.json({ success: false, error: '文件夹名称不能为空' }, { status: 400 });
+export const GET = apiHandler({
+	query: GetFoldersQuery,
+	handler: async ({ query, user }) => {
+		await FolderRepo.ensureRoot(user.id, query.category);
+		let folders;
+		if (query.parentId) {
+			const ids = await getAllSubfolderIds(prisma, query.parentId, user.id);
+			folders = await FolderRepo.getByIds(ids, user.id);
+		}else {
+			folders = await FolderRepo.getAll(user.id, query.category);
 		}
 
-		// 构建路径并检查是否存在
-		const path = await buildPath(name, parentId, user.id);
+		return SuccessResponse(folders);
+	},
+});
 
-		if (await pathExists(path, user.id)) {
-			return NextResponse.json({ success: false, error: '文件夹已存在' }, { status: 400 });
-		}
-
-		// 创建文件夹
-		const folder = await prisma.virtualFolder.create({
-			data: {
-				name,
-				path,
-				category,
-				parentId,
-				userId: user.id,
-			},
+export const POST = apiHandler({
+	body: CreateFolderBody,
+	handler: async ({ body, user }) => {
+		const folder = await FolderRepo.create({
+			name: body.name,
+			userId: user.id,
+			category: body.category,
+			parentId: body.parentId || null,
 		});
 
-		return NextResponse.json({
-			success: true,
-			data: folder,
-		});
-	} catch (error) {
-		console.error('创建文件夹失败:', error);
-		return NextResponse.json({ success: false, error: '创建文件夹失败' }, { status: 500 });
-	}
+		return SuccessResponse(folder);
+	},
 });

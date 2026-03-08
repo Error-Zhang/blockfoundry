@@ -127,6 +127,7 @@ export class ErrorHandler {
 	 * 显示错误消息
 	 */
 	error(content: string, key?: string): void {
+		console.error(content);
 		this.message.error({ content, key });
 	}
 

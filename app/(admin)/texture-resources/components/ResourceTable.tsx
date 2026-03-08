@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Card, Image, Input, Popconfirm, Space, Table, Tag } from 'antd';
+import React, { useState } from 'react';
+import { App, Button, Card, Image, Input, Popconfirm, Space, Table, Tag } from 'antd';
 import {
 	DeleteOutlined,
 	DownloadOutlined,
@@ -13,12 +13,16 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { TextureResource } from '../lib/types';
 import styles from '../../../styles/ResourceTable.module.scss';
+import { FALLBACK_URL } from '@/lib/constants';
 
 interface ResourceTableProps {
 	resources: TextureResource[];
 	loading: boolean;
 	searchText: string;
 	onSearchChange: (value: string) => void;
+	selectedRowKeys?: React.Key[];
+	onSelectedRowKeysChange?: (keys: React.Key[], rows: TextureResource[]) => void;
+	onOpenMergeAtlasModal?: () => void;
 	onPreview: (resource: TextureResource) => void;
 	onEdit: (resource: TextureResource) => void;
 	onDelete: (id: string) => void;
@@ -27,14 +31,16 @@ interface ResourceTableProps {
 	onBatchUpload: () => void;
 	isExpanded?: boolean;
 	onExpandToggle?: () => void;
-	highlightedResourceId?: string | null;
+	highlightSet?: Set<string>;
 }
-
 const ResourceTable: React.FC<ResourceTableProps> = ({
 	resources,
 	loading,
 	searchText,
 	onSearchChange,
+	selectedRowKeys = [],
+	onSelectedRowKeysChange,
+	onOpenMergeAtlasModal,
 	onPreview,
 	onEdit,
 	onDelete,
@@ -43,8 +49,10 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 	onBatchUpload,
 	isExpanded = false,
 	onExpandToggle,
-	highlightedResourceId,
+	highlightSet,
 }) => {
+	const { message } = App.useApp();
+
 	// 表格列定义
 	const columns: ColumnsType<TextureResource> = [
 		{
@@ -53,14 +61,7 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			key: 'preview',
 			width: 80,
 			render: (url: string, record: TextureResource) => (
-				<Image
-					width={50}
-					height={50}
-					src={url}
-					alt={record.name}
-					className={styles.resourceThumbnail}
-					fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-				/>
+				<Image width={50} height={50} src={url} fallback={FALLBACK_URL} className={styles.resourceThumbnail} />
 			),
 		},
 		{
@@ -130,7 +131,7 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			dataIndex: 'isPublic',
 			key: 'isPublic',
 			width: 80,
-			render: (isPublic: boolean) => <Tag color={isPublic ? 'green' : 'orange'}>{isPublic ? '可用' : '不可用'}</Tag>,
+			render: (isPublic: boolean) => <Tag color={isPublic ? 'green' : 'red'}>{isPublic ? '可用' : '不可用'}</Tag>,
 		},
 		{
 			title: '操作',
@@ -149,6 +150,30 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			),
 		},
 	];
+
+	const rowSelection = {
+		selectedRowKeys,
+		onChange: (keys: React.Key[], rows: TextureResource[]) => {
+			onSelectedRowKeysChange?.(keys, rows);
+		},
+		preserveSelectedRowKeys: true,
+		selections: [
+			Table.SELECTION_ALL,
+			Table.SELECTION_INVERT,
+			Table.SELECTION_NONE,
+			{
+				key: 'select-folder-children',
+				text: '选择同文件夹的子项',
+				onSelect: () => {
+					if (!onSelectedRowKeysChange) return;
+					const selectedSet = new Set<string>(resources.filter((r) => selectedRowKeys.includes(r.id)).map((r) => r.folderId));
+					const keys = resources.filter((r) => selectedSet.has(r.folderId)).map((r) => r.id as React.Key);
+					const rows = resources.filter((r) => keys.includes(r.id));
+					onSelectedRowKeysChange(keys, rows);
+				},
+			},
+		],
+	};
 
 	return (
 		<Card
@@ -178,6 +203,14 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 					<Button icon={<UploadOutlined />} onClick={onBatchUpload}>
 						批量上传
 					</Button>
+					<Button
+						type="primary"
+						onClick={onOpenMergeAtlasModal}
+						disabled={!selectedRowKeys || selectedRowKeys.length === 0}
+						title="将选中的纹理合并成图集"
+					>
+						合并为图集
+					</Button>
 				</Space>
 			}
 		>
@@ -186,16 +219,17 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 					columns={columns}
 					dataSource={resources}
 					rowKey="id"
+					rowSelection={rowSelection}
 					loading={loading}
-					scroll={{ x: 1200 }}
+					scroll={{ x: 1200, y: '80vh' }}
 					pagination={{
 						defaultPageSize: 10,
-						pageSizeOptions: ['10', '20', '50', '100'],
+						pageSizeOptions: ['10', '20', '50', '100', '200', '500'],
 						showSizeChanger: true,
 						showQuickJumper: true,
 						showTotal: (total) => `共 ${total} 个纹理资源`,
 					}}
-					rowClassName={(record) => (record.id === highlightedResourceId ? styles.highlightedRow : '')}
+					rowClassName={(record) => (highlightSet?.has(record.id) ? styles.highlightedRow : '')}
 				/>
 			</div>
 		</Card>

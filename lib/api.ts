@@ -46,7 +46,8 @@ async function request<T = any>(url: string, options?: RequestInit): Promise<Api
  * GET 请求
  */
 export async function get<T = any>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-	const searchParams = params ? new URLSearchParams(params).toString() : '';
+	const cleanParams = params ? Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== undefined && v !== null)) : undefined;
+	const searchParams = cleanParams ? new URLSearchParams(cleanParams).toString() : '';
 	const fullUrl = searchParams ? `${url}?${searchParams}` : url;
 	return request<T>(fullUrl, { method: 'GET' });
 }
@@ -181,10 +182,10 @@ export class FormDataBuilder {
 		}
 
 		if (value instanceof File || value instanceof Blob) {
-			this.formData.append(key, value);
-		} else if (Array.isArray(value)) {
-			this.formData.append(key, value.join(','));
-		} else if (typeof value === 'object') {
+			this.appendFile(key, value);
+		} else if (Array.isArray(value) && value.every((v) => v instanceof File || v instanceof Blob)) {
+			this.appendFiles(key, value);
+		} else if (value instanceof Object) {
 			this.formData.append(key, JSON.stringify(value));
 		} else {
 			this.formData.append(key, String(value));
@@ -229,9 +230,6 @@ export class FormDataBuilder {
 	}
 }
 
-/**
- * 创建 FormData 构建器
- */
-export function createFormData(): FormDataBuilder {
-	return new FormDataBuilder();
-}
+export const createFormData = (data: object) => {
+	return new FormDataBuilder().appendAll(data).build();
+};
