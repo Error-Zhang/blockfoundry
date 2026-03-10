@@ -8,8 +8,7 @@ export const TextureRepo = {
 	create,
 	update,
 	delete: deleteTexture,
-	getById,
-	getByFolderIds,
+	findById,
 	countInFolder,
 	clearInFolder,
 	findByHash,
@@ -20,29 +19,12 @@ export const TextureRepo = {
 	findByIds,
 };
 
-async function getById(id: string, userId: number) {
+async function findById(id: string, userId: number) {
 	return prismaSafe(
 		prisma.textureResource.findFirstOrThrow({
 			where: { id, userId },
 		})
 	);
-}
-
-async function getByFolderIds(folderIds: string[], userId: number) {
-	let where: any = { userId };
-
-	if (folderIds.length > 0) {
-		where.folderId = { in: folderIds };
-	}
-
-	const result = await prismaSafe(
-		prisma.textureResource.findMany({
-			where,
-			orderBy: { createdAt: 'desc' },
-		})
-	);
-
-	return result;
 }
 
 async function countInFolder(folderId: string, userId: number) {
@@ -68,20 +50,22 @@ async function checkNameExists(name: string, folderId: string, userId: number) {
 	return !!result;
 }
 
-async function findByFolders(folderIds: string[], userId: number) {
+async function findByFolders(folderIds: string[], userId: number,options:object={}) {
 	return prisma.textureResource.findMany({
 		where: {
 			userId,
 			folderId: { in: folderIds },
+			...options,
 		},
 	});
 }
 
-async function findByIds(ids: string[], userId: number) {
+async function findByIds(ids: string[], userId: number, options: object = {}) {
 	return prisma.textureResource.findMany({
 		where: {
 			id: { in: ids },
 			userId,
+			...options,
 		},
 	});
 }
@@ -93,7 +77,7 @@ async function create(data: Partial<TextureResourceModel>) {
 }
 
 async function update(id: string, userId: number, data: Partial<TextureResourceModel>) {
-	await getById(id, userId);
+	await findById(id, userId);
 
 	return prisma.textureResource.update({
 		where: { id },

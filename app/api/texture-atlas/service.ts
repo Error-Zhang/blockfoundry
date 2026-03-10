@@ -12,6 +12,7 @@ import { TextureRepo } from '@/app/api/texture-resources/texture.repo';
 import { FolderRepo } from '@/app/api/virtual-folders/folder.repo';
 import { getIncludeFolderIds } from '@/app/api/virtual-folders/service';
 import { DIR_NAMES } from '@/lib/constants';
+import { TextureResourceModel } from '@/app/api/texture-resources/interface';
 
 export const formatAtlasResponse = (atlas: TextureAtlasModel) => ({
 	...atlas,
@@ -99,11 +100,12 @@ const saveAtlasFiles = async (name: string, format: 'png' | 'webp', imageBuffer:
 	return imageBuffer.length;
 };
 
-const createAtlasInternal = async (name: string, userId: number, textures: LayoutItem[], format: 'png' | 'webp' = 'png', padding = 2) => {
-	if (textures.length < 2) {
-		throw new CustomError('纹理数量不足');
-	}
-
+const createAtlasInternal = async (
+	base: { name: string; userId: number; relatedFolderId: string },
+	textures: LayoutItem[],
+	format: 'png' | 'webp' = 'png',
+	padding = 0
+) => {
 	const { atlasWidth, atlasHeight, sprites, overlays } = buildAtlasLayout(textures, padding);
 
 	if (!atlasWidth || !atlasHeight) {
@@ -129,37 +131,25 @@ const createAtlasInternal = async (name: string, userId: number, textures: Layou
 		sprites,
 	};
 
-	const fileSize = await saveAtlasFiles(name, format, imageBuffer, jsonPayload);
+	const fileSize = await saveAtlasFiles(base.name, format, imageBuffer, jsonPayload);
 
 	const atlas = await AtlasRepo.create({
-		name,
+		name: base.name,
 		width: atlasWidth,
 		height: atlasHeight,
 		spriteCount: sprites.length,
 		format: format.toUpperCase(),
 		fileSize,
 		hash: calculateFileHash(imageBuffer),
-		sourceTextureIds: JSON.stringify(textures.map((t) => t.id)),
-		userId,
+		userId: base.userId,
+		folderId: base.relatedFolderId,
 	});
 
 	return atlas;
 };
 
-export const createAtlas = async (name: string, userId: number, options: { textureIds: string[]; format?: 'png' | 'webp' }) => {
-	const textures = await prisma.textureResource.findMany({
-		where: {
-			id: { in: options.textureIds },
-			userId,
-			isPublic: true,
-		},
-	});
-
-	if (!textures.length) {
-		throw new CustomError('未找到可用纹理资源');
-	}
-
-	const layoutItems: LayoutItem[] = textures.map((t) => ({
+export const createAtlas = async (base: { name: string; userId: number; relatedFolderId: string; textures:TextureResourceModel[] }, options: { format?: 'png' | 'webp' }) => {
+	const layoutItems: LayoutItem[] = base.textures.map((t) => ({
 		id: t.id,
 		name: t.name,
 		width: t.width,
@@ -167,25 +157,7 @@ export const createAtlas = async (name: string, userId: number, options: { textu
 		filePath: FileStorage.getPath(DIR_NAMES.TEXTURES, t.fileName),
 	}));
 
-	return createAtlasInternal(name, userId, layoutItems, options.format ?? 'png');
-};
-
-export const generateAtlasFromFolder = async (folderId: string, userId: number, newName: string) => {
-	await FolderRepo.getById(folderId, userId);
-
-	const folderIds = await getIncludeFolderIds(prisma, folderId, userId);
-
-	const textures = await TextureRepo.getByFolderIds(folderIds, userId);
-
-	const layoutItems: LayoutItem[] = textures.map((t) => ({
-		id: t.id,
-		name: t.name,
-		width: t.width,
-		height: t.height,
-		filePath: FileStorage.getPath(DIR_NAMES.TEXTURES, t.fileName),
-	}));
-
-	return createAtlasInternal(newName, userId, layoutItems);
+	return createAtlasInternal(base, layoutItems, options.format);
 };
 
 export const deleteAtlas = async (id: string, userId: number) => {

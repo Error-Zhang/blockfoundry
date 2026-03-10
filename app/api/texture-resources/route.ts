@@ -29,7 +29,7 @@ export const GET = apiHandler({
 	handler: async ({ query, user }) => {
 		let folderIds = await getIncludeFolderIds(prisma, query.folderId, user.id);
 
-		const resources = await TextureRepo.getByFolderIds(folderIds, user.id);
+		const resources = await TextureRepo.findByFolders(folderIds, user.id);
 
 		const formattedResources = resources.map(formatTextureResponse);
 

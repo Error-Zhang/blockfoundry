@@ -20,7 +20,7 @@ export const GET = apiHandler({
 	params: TextureParams,
 	handler: async ({ params, user }) => {
 		const { id } = params;
-		const resource = await TextureRepo.getById(id, user.id);
+		const resource = await TextureRepo.findById(id, user.id);
 		return SuccessResponse(formatTextureResponse(resource));
 	},
 });
@@ -31,7 +31,7 @@ export const PUT = apiHandler({
 	handler: async ({ params, body, user }) => {
 		const { id } = params;
 
-		const existingResource = await TextureRepo.getById(id, user.id);
+		const existingResource = await TextureRepo.findById(id, user.id);
 
 		if (body.folderId === existingResource.folderId && body.name === existingResource.name) {
 			throw new CustomError('文件名冲突')

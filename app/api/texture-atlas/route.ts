@@ -1,31 +1,45 @@
 import { z } from 'zod';
 import { apiHandler } from '@/app/api/lib/api-handler';
 import { createAtlas,  formatAtlasResponse } from './service';
-import { ErrorResponse, SuccessResponse } from '@/app/api/lib/response';
+import { SuccessResponse } from '@/app/api/lib/response';
 import { AtlasRepo } from '@/app/api/texture-atlas/atlas.repo';
-import { CustomError } from '@/app/api/lib/errors';
+import { FolderRepo } from '../virtual-folders/folder.repo';
+import { TextureRepo } from '../texture-resources/texture.repo';
 
 const GenerateAtlasBody = z.object({
-	textureIds: z.array(z.string()).min(1, '请选择至少一个纹理'),
-	name: z.string().min(1,"文件名不允许为空"),
+	name: z.string().min(1, '文件名不允许为空'),
 	padding: z.number().optional(),
 	maxWidth: z.number().optional(),
 	maxHeight: z.number().optional(),
 	gridSize: z.number().optional(),
 	alignPowerOfTwo: z.boolean().optional(),
 	format: z.enum(['png', 'webp']).optional(),
+	textureIds: z.array(z.string()).min(1, '请选择至少一个纹理'),
 });
 
 export const POST = apiHandler({
 	body: GenerateAtlasBody,
 	handler: async ({ body, user }) => {
-		const { name ,...data} = body;
-		const exist = await AtlasRepo.getByName(name, user.id);
-		if (exist) {
-			throw new CustomError('文件名已存在');
-		}
+		const { name, textureIds, ...options } = body;
 
-		const result = await createAtlas(name, user.id, data);
+		const data = {
+			name,
+			parentId: null,
+			category: 'atlas',
+			userId: user.id,
+		};
+
+		await AtlasRepo.checkNameAvailable(name, user.id);
+		await FolderRepo.checkNameAvailable(data);
+
+		// 1.创建一个包含图集全部纹理的文件夹
+		const folder = await FolderRepo.create(data);
+		const textures = await TextureRepo.findByIds(textureIds, user.id, { isPublic: true });
+
+		await TextureRepo.copyBatch(textures, user.id, folder.id);
+
+		// 2.创建图集
+		const result = await createAtlas({ name, userId: user.id, relatedFolderId: folder.id, textures }, options);
 
 		return SuccessResponse(result);
 	},

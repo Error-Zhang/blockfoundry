@@ -58,7 +58,7 @@ model TextureResource {
   usageCount  Int             @default(0)
 
   user   User           @relation("UserTextureResources", fields: [userId], references: [id], onDelete: Cascade)
-  folder VirtualFolder @relation("FolderTextures", fields: [folderId], references: [id], onDelete: Cascade)
+  folder VirtualFolder  @relation("FolderTextures", fields: [folderId], references: [id], onDelete: Cascade)
 
   @@index([folderId])
   @@index([fileHash])
@@ -73,6 +73,7 @@ model VirtualFolder {
   category  String             @default("texture") // texture | block | material
   parentId  String?
   userId    Int                // 关联用户ID
+  textureAtlas      TextureAtlas?
   parent    VirtualFolder?     @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children  VirtualFolder[]    @relation("FolderHierarchy")
   textures  TextureResource[]  @relation("FolderTextures")
@@ -81,6 +82,7 @@ model VirtualFolder {
   updatedAt DateTime           @updatedAt
 
   user User @relation("UserVirtualFolders", fields: [userId], references: [id], onDelete: Cascade)
+
 
   @@index([parentId])
   @@index([userId])
@@ -140,14 +142,16 @@ model TextureAtlas {
   format            String   @default("PNG")
   fileSize          Int      @default(0)
   hash              String   @default("") // 图集文件哈希值，用于去重
-  sourceTextureIds  String   @default("[]") // JSON string array of texture resource ids
+  folderId          String   @unique      // 关联虚拟文件夹
   userId            Int
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   user User @relation("UserTextureAtlases", fields: [userId], references: [id], onDelete: Cascade)
+  folder VirtualFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([folderId])
   @@index([name])
   @@index([hash])
 }

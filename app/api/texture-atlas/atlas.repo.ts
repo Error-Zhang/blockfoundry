@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { prismaSafe } from '@/app/api/lib/prismaSafe';
 import { TextureAtlasModel } from '@/app/api/texture-atlas/interface';
-import { NotFoundError } from '@/app/api/lib/errors';
+import { CustomError, NotFoundError } from '@/app/api/lib/errors';
 
 export const AtlasRepo = {
 	create,
@@ -10,6 +10,7 @@ export const AtlasRepo = {
 	getById,
 	getByName,
 	getByHash,
+	checkNameAvailable,
 	getAll,
 };
 
@@ -25,6 +26,13 @@ async function getByName(name: string, userId: number) {
 	return prisma.textureAtlas.findFirst({
 		where: { name, userId },
 	});
+}
+
+async function checkNameAvailable(name: string, userId: number) {
+	const exist = await getByName(name, userId);
+	if (exist) {
+		throw new CustomError('文件名已存在');
+	}
 }
 
 async function getByHash(hash: string, userId: number) {

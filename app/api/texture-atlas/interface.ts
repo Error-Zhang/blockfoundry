@@ -7,7 +7,7 @@ export interface TextureAtlasModel {
 	format: string;
 	fileSize: number;
 	hash: string;
-	sourceTextureIds: string;
+	folderId: string;
 	userId: number;
 	createdAt: Date;
 	updatedAt: Date;

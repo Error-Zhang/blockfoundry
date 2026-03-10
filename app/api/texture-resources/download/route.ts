@@ -24,7 +24,7 @@ export const POST = apiHandler({
 
 		const folderIds = await getIncludeFolderIds(prisma, folderId, user.id);
 
-		const resources = await TextureRepo.getByFolderIds(folderIds, user.id);
+		const resources = await TextureRepo.findByFolders(folderIds, user.id);
 
 		const zip = new JSZip();
 

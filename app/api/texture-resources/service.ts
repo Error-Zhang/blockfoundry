@@ -131,7 +131,7 @@ export const formatTextureResponse = (resource: TextureResourceModel) => {
 };
 
 export const copyTexture = async (resourceId: string, targetFolderId: string, userId: number) => {
-	const resource = await TextureRepo.getById(resourceId, userId);
+	const resource = await TextureRepo.findById(resourceId, userId);
 	
 	if (!resource) {
 		throw new CustomError('资源不存在');
@@ -160,7 +160,7 @@ export const copyFolderResources = async (
 	}
 
 	const allFolderIds = await getIncludeFolderIds(prisma, sourceFolderId, userId);
-	const resources = await TextureRepo.getByFolderIds(allFolderIds, userId);
+	const resources = await TextureRepo.findByFolders(allFolderIds, userId);
 
 	const groupedByTargetFolder = new Map<string, typeof resources>();
 
