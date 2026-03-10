@@ -1,29 +1,38 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { TreeNode } from '@/app/components/common/FileTree';
 
 /**
  * 节点编辑 Hook
  */
-export function useNodeEdit<T = any>() {
-	const [editingNode, setEditingNode] = useState<string | null>(null);
-	const [editingValue, setEditingValue] = useState<string>('');
+export function useNodeEdit<T = any>(editingNode?: TreeNode<T>) {
+	const getEditingVal = ()=>{
+		return {
+			key: editingNode?.key || null,
+			value: editingNode?.title || '',
+		};
+	}
+	// 使用 useMemo 替代多个 useState
+	const [state, setState] = useState(getEditingVal());
+
+	// 同步外部变化
+	useEffect(() => {
+		setState(getEditingVal());
+	}, [editingNode]);
 
 	const startEdit = useCallback((key: string, currentValue: string) => {
-		setEditingNode(key);
-		setEditingValue(currentValue);
+		setState({ key, value: currentValue });
 	}, []);
 
 	const cancelEdit = useCallback(() => {
-		setEditingNode(null);
-		setEditingValue('');
+		setState({ key: null, value: '' });
 	}, []);
 
 	const updateValue = useCallback((value: string) => {
-		setEditingValue(value);
+		setState((prev) => ({ ...prev, value }));
 	}, []);
 
 	return {
-		editingNode,
-		editingValue,
+		editing:state,
 		startEdit,
 		cancelEdit,
 		updateValue,

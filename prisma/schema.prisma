@@ -43,7 +43,6 @@ model Resource {
 model TextureResource {
   id          String          @id @default(uuid())
   name        String
-  description String          @default("")
   fileName    String          // 实际存储的文件名
   fileHash    String          // 文件哈希值,用于去重
   width       Int

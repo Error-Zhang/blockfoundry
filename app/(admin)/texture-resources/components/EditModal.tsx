@@ -85,10 +85,6 @@ const EditModal: React.FC<EditModalProps> = ({ visible, editingResource, form, l
 					<Input placeholder="请输入纹理名称" />
 				</Form.Item>
 
-				<Form.Item name="description" label="描述">
-					<Input.TextArea placeholder="请输入纹理描述" rows={3} />
-				</Form.Item>
-
 				<Form.Item name="tags" label="标签">
 					<Select
 						mode="tags"

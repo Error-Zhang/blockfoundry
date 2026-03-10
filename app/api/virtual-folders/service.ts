@@ -2,8 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { VirtualFolderModel } from '@/app/api/virtual-folders/interface';
 import { FolderRepo } from '@/app/api/virtual-folders/folder.repo';
 
-export async function getAllSubfolderIds(tx: typeof prisma, rootId: string, userId: number): Promise<string[]> {
-	const result: string[] = [];
+export async function getIncludeFolderIds(tx: typeof prisma, rootId: string, userId: number): Promise<string[]> {
+	const result: string[] = [rootId];
 	const queue = [rootId];
 
 	while (queue.length) {
@@ -23,14 +23,59 @@ export async function getAllSubfolderIds(tx: typeof prisma, rootId: string, user
 	return result;
 }
 
+export async function buildFolderPath(
+	folderMap: Map<string, VirtualFolderModel>,
+	folderId: string
+): Promise<string> {
+	const parts: string[] = [];
+	let currentId: string | null = folderId;
+
+	while (currentId) {
+		const folder = folderMap.get(currentId);
+		if (!folder) break;
+		parts.unshift(folder.name);
+		currentId = folder.parentId;
+	}
+
+	return parts.join('.');
+}
+
+async function generateUniqueName(baseName: string, parentId: string | null, userId: number): Promise<string> {
+	let name = baseName;
+	let counter = 1;
+
+	while (true) {
+		const existing = await prisma.virtualFolder.findFirst({
+			where: {
+				name,
+				parentId,
+				userId,
+			},
+			select: { id: true },
+		});
+
+		if (!existing) {
+			return name;
+		}
+
+		counter++;
+		name = `${baseName} (${counter})`;
+	}
+}
+
 export async function copyFolderStructure(sourceFolder: VirtualFolderModel, targetParentId: string | null): Promise<Map<string, string>> {
 	const folderMapping = new Map<string, string>();
 	const userId = sourceFolder.userId;
 
-	async function copyRecursive(source: VirtualFolderModel, newParentId: string | null) {
-		// 存在则取，否则创建（原子操作）
-		const newFolder = await FolderRepo.upsert(source.id, {
-			name: source.name,
+	async function copyRecursive(source: VirtualFolderModel, newParentId: string | null, isRoot: boolean = false) {
+		let folderName = source.name;
+
+		if (isRoot) {
+			folderName = await generateUniqueName(source.name, newParentId, userId);
+		}
+
+		const newFolder = await FolderRepo.create({
+			name: folderName,
 			parentId: newParentId,
 			userId,
 			category: source.category,
@@ -38,7 +83,6 @@ export async function copyFolderStructure(sourceFolder: VirtualFolderModel, targ
 
 		folderMapping.set(source.id, newFolder.id);
 
-		// 查子目录
 		const subFolders = await prisma.virtualFolder.findMany({
 			where: {
 				parentId: source.id,
@@ -47,13 +91,12 @@ export async function copyFolderStructure(sourceFolder: VirtualFolderModel, targ
 			orderBy: { name: 'asc' },
 		});
 
-		// 递归复制
 		for (const subFolder of subFolders) {
-			await copyRecursive(subFolder, newFolder.id);
+			await copyRecursive(subFolder, newFolder.id, false);
 		}
 	}
 
-	await copyRecursive(sourceFolder, targetParentId);
+	await copyRecursive(sourceFolder, targetParentId, true);
 
 	return folderMapping;
 }

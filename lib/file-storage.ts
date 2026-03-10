@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { DIR_NAMES } from '@/lib/constants';
+import { unlinkFiles, writeFileSafe } from '@/app/api/lib/utils';
 
 const BASE_DIR = join(process.cwd(), 'data');
 
@@ -24,4 +25,12 @@ export const FileStorage = {
 	getUrl(dirname: DIR_NAMES, fileName: string, suffix: string = '') {
 		return `/${dirname}/${suffix ? `${fileName}.${suffix.toLowerCase()}` : fileName}`;
 	},
+
+	async writeFile(path: string, content: any): Promise<void> {
+		await writeFileSafe(path, content);
+	},
+
+	async delete(dirname: DIR_NAMES, fileName: string, suffix: string = '') {
+		await unlinkFiles(FileStorage.getPath(dirname, fileName, suffix));
+	}
 };

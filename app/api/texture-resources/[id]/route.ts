@@ -46,7 +46,7 @@ export const DELETE = apiHandler({
 	params: TextureParams,
 	handler: async ({ params, user }) => {
 		const { id } = params;
-		await TextureRepo.delete(id, user.id);
-		return SuccessResponse(null);
+		const res = await TextureRepo.delete(id, user.id);
+		return SuccessResponse(res);
 	},
 });

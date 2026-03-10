@@ -114,6 +114,7 @@ export default function TextureResourceManagementPage() {
 	const { loading: modelLoadingUpdate, handle: handleEditResource } = useAsyncAction(updateTextureResource, {
 		onSuccess,
 	});
+
 	const { loading: modelLoadingCreate, handle: handleCreateResource } = useAsyncAction(createTextureResource, {
 		onSuccess,
 	});

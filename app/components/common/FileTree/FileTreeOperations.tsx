@@ -12,16 +12,16 @@ export interface FileManagerApiService<TFile, TFolder> {
 	getFolders: (parentId?: string) => ApiResponsePromise<TFolder[]>;
 	createFolder: (name: string, parentId: string) => ApiResponsePromise<TFolder>;
 	renameFolder: (id: string, name: string) => ApiResponsePromise<TFolder>;
-	deleteFolder: (id: string) => ApiResponsePromise<void>;
-	moveFolder: (id: string, targetParentId: string) => ApiResponsePromise<TFolder>;
-	copyFolder: (id: string, targetParentId: string) => ApiResponsePromise<TFolder>;
-	clearFolder: (id: string) => ApiResponsePromise<void>;
+	deleteFolder: (id: string) => ApiResponsePromise<any>;
+	moveFolder: (id: string, targetParentId: string) => ApiResponsePromise<any>;
+	copyFolder: (id: string, targetParentId: string) => ApiResponsePromise<any>;
+	clearFolder: (id: string) => ApiResponsePromise<any>;
 	downloadFolder: (id: string) => Promise<Blob>;
 
 	// 文件操作
 	createFile: (params: unknown) => ApiResponsePromise<TFile>;
 	updateFile: (id: string, data: Partial<TFile>) => ApiResponsePromise<TFile>;
-	deleteFile: (id: string) => ApiResponsePromise<void>;
+	deleteFile: (id: string) => ApiResponsePromise<any>;
 	copyFile: (id: string, targetFolderId: string) => ApiResponsePromise<TFile>;
 }
 
@@ -247,7 +247,7 @@ export class FileTreeOperations<TFile, TFolder> {
 				return;
 			}
 			await this.config.errorHandler.executeApi(() => this.config.api.clearFolder(folderId), {
-				successMessage: '文件夹清空成功',
+				successMessage: '文件夹已清空',
 				errorMessage: '清空文件夹失败',
 				onSuccess: async () => {
 					await this.config.onFolderChange?.();

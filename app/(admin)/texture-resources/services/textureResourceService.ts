@@ -87,8 +87,7 @@ export async function getTags() {
  * 复制纹理资源
  */
 export async function copyTextureResource(id: string, targetFolderId?: string): Promise<ApiResponse<TextureResource>> {
-	return await post<TextureResource>('/api/texture-resources', {
-		action: 'copy',
+	return await put<TextureResource>('/api/texture-resources', {
 		sourceId: id,
 		targetFolderId,
 	});
@@ -109,4 +108,24 @@ export async function downloadFolderResources(folderId: string): Promise<Blob> {
 	}
 
 	return response.blob();
+}
+
+/**
+ * 清空文件夹中的纹理资源
+ */
+export async function clearTextureResourceInFolder(folderId: string): Promise<ApiResponse<{ deletedCount: number }>> {
+	return post<{ deletedCount: number }>('/api/texture-resources/clear-folder', { folderId });
+}
+
+/**
+ * 复制文件夹中的纹理资源
+ */
+export async function copyFolderResources(
+	sourceFolderId: string,
+	folderMapping: Record<string, string>
+): Promise<ApiResponse<{ count: number; resources: TextureResource[] }>> {
+	return post<{ count: number; resources: TextureResource[] }>('/api/texture-resources/copy-folder', {
+		sourceFolderId,
+		folderMapping,
+	});
 }

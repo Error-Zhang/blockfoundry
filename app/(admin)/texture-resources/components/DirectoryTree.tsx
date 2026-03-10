@@ -3,7 +3,6 @@ import { FileImageOutlined } from '@ant-design/icons';
 import { TextureResource } from '../lib/types';
 import { downloadTextureResource } from '../lib/utils';
 import {
-	clearVirtualFolder,
 	copyVirtualFolder,
 	createVirtualFolder,
 	deleteVirtualFolder,
@@ -12,7 +11,15 @@ import {
 	renameVirtualFolder,
 	VirtualFolder,
 } from '@/app/services/virtualFolderService';
-import { copyTextureResource, createTextureResource, deleteTextureResource, downloadFolderResources, updateTextureResource } from '../services/textureResourceService';
+import {
+	copyTextureResource,
+	copyFolderResources,
+	createTextureResource,
+	deleteTextureResource,
+	downloadFolderResources,
+	updateTextureResource,
+	clearTextureResourceInFolder,
+} from '../services/textureResourceService';
 import { FileManagerApiService, GenericFileManager } from '@/app/components/common/FileTree';
 
 interface DirectoryTreeProps {
@@ -24,16 +31,32 @@ interface DirectoryTreeProps {
 	onWidthChange?: (width: number) => void;
 }
 
+const clearOrDeleteFolder = async (folderId: string,isClear:boolean) => {
+	const rRes = await clearTextureResourceInFolder(folderId);
+	const fRes = await deleteVirtualFolder(folderId, isClear);
+	return {
+		success: true,
+		data: {
+			resourceCount: rRes.data?.deletedCount,
+			folderCount: fRes.data?.deletedCount,
+		},
+	};
+};
+
 // 创建 API 服务适配器
 const createTextureApiService = (): FileManagerApiService<TextureResource, VirtualFolder> => ({
 	// 文件夹操作
 	getFolders: (parentId?: string) => getVirtualFolders('texture', parentId),
 	createFolder: (name: string, parentId: string) => createVirtualFolder(name, parentId, 'texture'),
 	renameFolder: renameVirtualFolder,
-	deleteFolder: deleteVirtualFolder,
+	deleteFolder: (folderId) => clearOrDeleteFolder(folderId, false),
 	moveFolder: moveVirtualFolder,
-	copyFolder: copyVirtualFolder,
-	clearFolder: clearVirtualFolder,
+	copyFolder: async (id, targetParentId) => {
+		const copyResult = await copyVirtualFolder(id, targetParentId);
+		await copyFolderResources(id, copyResult.data!);
+		return copyResult;
+	},
+	clearFolder: (folderId) => clearOrDeleteFolder(folderId, true),
 	downloadFolder: downloadFolderResources,
 	createFile: createTextureResource,
 	updateFile: updateTextureResource,

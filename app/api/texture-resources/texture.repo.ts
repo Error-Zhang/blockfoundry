@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { prismaSafe } from '@/app/api/lib/prismaSafe';
 import { TextureResourceModel } from '@/app/api/texture-resources/interface';
 import { CustomError, NotFoundError } from '@/app/api/lib/errors';
+import { getIncludeFolderIds } from '@/app/api/virtual-folders/service';
 
 export const TextureRepo = {
 	create,
@@ -10,11 +11,13 @@ export const TextureRepo = {
 	getById,
 	getByFolderIds,
 	countInFolder,
+	clearInFolder,
 	findByHash,
 	checkNameExists,
 	copy,
 	copyBatch,
 	findByFolders,
+	findByIds,
 };
 
 async function getById(id: string, userId: number) {
@@ -59,7 +62,7 @@ async function checkNameExists(name: string, folderId: string, userId: number) {
 		where: {
 			name,
 			folderId,
-			userId
+			userId,
 		},
 	});
 	return !!result;
@@ -70,6 +73,15 @@ async function findByFolders(folderIds: string[], userId: number) {
 		where: {
 			userId,
 			folderId: { in: folderIds },
+		},
+	});
+}
+
+async function findByIds(ids: string[], userId: number) {
+	return prisma.textureResource.findMany({
+		where: {
+			id: { in: ids },
+			userId,
 		},
 	});
 }
@@ -91,27 +103,11 @@ async function update(id: string, userId: number, data: Partial<TextureResourceM
 }
 
 async function deleteTexture(id: string, userId: number) {
-	return prisma.$transaction(async (tx) => {
-		const resource = await tx.textureResource.findFirstOrThrow({
-			where: { id, userId },
-		});
-
-		const sameFileCount = await tx.textureResource.count({
-			where: {
-				fileHash: resource.fileHash,
-				id: { not: id },
-			},
-		});
-
-		await tx.textureResource.delete({
-			where: { id },
-		});
-
-		return {
-			shouldDeleteFile: sameFileCount === 0,
-			fileName: resource.fileName,
-		};
+	const resource = await prisma.textureResource.delete({
+		where: { id, userId },
 	});
+
+	return resource;
 }
 
 async function copy(asset: TextureResourceModel, userId: number, targetFolderId: string) {
@@ -140,4 +136,15 @@ async function copyBatch(resources: TextureResourceModel[], userId: number, targ
 			})
 		)
 	);
+}
+
+async function clearInFolder(folderId: string, userId: number){
+	const folderIds = await getIncludeFolderIds(prisma, folderId, userId);
+	const { count } = await prisma.textureResource.deleteMany({
+		where: {
+			userId,
+			folderId: { in: folderIds },
+		},
+	});
+	return { deletedCount: count };
 }

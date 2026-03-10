@@ -10,7 +10,7 @@ import { CustomError } from '@/app/api/lib/errors';
 
 import { TextureRepo } from '@/app/api/texture-resources/texture.repo';
 import { FolderRepo } from '@/app/api/virtual-folders/folder.repo';
-import { getAllSubfolderIds } from '@/app/api/virtual-folders/service';
+import { getIncludeFolderIds } from '@/app/api/virtual-folders/service';
 import { DIR_NAMES } from '@/lib/constants';
 
 export const formatAtlasResponse = (atlas: TextureAtlasModel) => ({
@@ -93,12 +93,8 @@ const renderAtlasImage = async (width: number, height: number, overlays: sharp.O
 };
 
 const saveAtlasFiles = async (name: string, format: 'png' | 'webp', imageBuffer: Buffer, jsonPayload: any) => {
-	const imagePath = FileStorage.getPath(DIR_NAMES.ATLASES, `${name}.${format}`);
-
-	const jsonPath = FileStorage.getPath(DIR_NAMES.ATLASES, `${name}.json`);
-
-	await writeFileSafe(imagePath, imageBuffer);
-	await writeFileSafe(jsonPath, JSON.stringify(jsonPayload, null, 2));
+	await FileStorage.writeFile(FileStorage.getPath(DIR_NAMES.ATLASES, name, format), imageBuffer);
+	await FileStorage.writeFile(FileStorage.getPath(DIR_NAMES.ATLASES, name, 'json'), JSON.stringify(jsonPayload, null, 2));
 
 	return imageBuffer.length;
 };
@@ -177,7 +173,7 @@ export const createAtlas = async (name: string, userId: number, options: { textu
 export const generateAtlasFromFolder = async (folderId: string, userId: number, newName: string) => {
 	await FolderRepo.getById(folderId, userId);
 
-	const folderIds = await getAllSubfolderIds(prisma, folderId, userId);
+	const folderIds = await getIncludeFolderIds(prisma, folderId, userId);
 
 	const textures = await TextureRepo.getByFolderIds(folderIds, userId);
 
@@ -195,10 +191,8 @@ export const generateAtlasFromFolder = async (folderId: string, userId: number, 
 export const deleteAtlas = async (id: string, userId: number) => {
 	const atlas = await AtlasRepo.getById(id, userId);
 
-	await unlinkFiles(
-		FileStorage.getPath(DIR_NAMES.ATLASES, atlas.name, atlas.format.toLowerCase()),
-		FileStorage.getPath(DIR_NAMES.ATLASES, atlas.name, 'json')
-	);
+	await FileStorage.delete(DIR_NAMES.ATLASES, atlas.name, atlas.format);
+	await FileStorage.delete(DIR_NAMES.ATLASES, atlas.name, 'json');
 
 	await AtlasRepo.delete(id, userId);
 

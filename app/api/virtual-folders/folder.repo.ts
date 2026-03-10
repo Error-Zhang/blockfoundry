@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { prismaSafe } from '@/app/api/lib/prismaSafe';
 import { CustomError } from '@/app/api/lib/errors';
 import { VirtualFolderModel } from '@/app/api/virtual-folders/interface';
-import { copyFolderStructure, getAllSubfolderIds } from '@/app/api/virtual-folders/service';
+import { copyFolderStructure, getIncludeFolderIds } from '@/app/api/virtual-folders/service';
 
 export const FolderRepo = {
 	getAll,
@@ -10,17 +10,17 @@ export const FolderRepo = {
 	getByIds,
 	create,
 	update,
-	delete: deleteFolder,
+	deleteOrClear,
 	ensureRoot,
 	copy,
 	move,
 	upsert,
+	checkNameAvailable,
 };
 
 async function getAll(userId: number, category: string) {
 	return prisma.virtualFolder.findMany({
 		where: { userId, category },
-		orderBy: { name: 'asc' },
 	});
 }
 
@@ -40,7 +40,6 @@ async function getByIds(ids: string[], userId: number) {
 				id: { in: ids },
 				userId,
 			},
-			orderBy: { name: 'asc' },
 		}),
 		{
 			notFoundMessage: '文件夹不存在',
@@ -61,20 +60,24 @@ async function update(id: string, userId: number, data: { name: string }) {
 	});
 }
 
-async function deleteFolder(id: string, userId: number) {
+async function deleteOrClear(id: string, userId: number, isClear: boolean) {
 	return prisma.$transaction(async (tx) => {
-		const subIds = await getAllSubfolderIds(tx as any, id, userId);
+		const subIds = await getIncludeFolderIds(tx as any, id, userId);
 
-		await tx.virtualFolder.deleteMany({
+		let { count } = await tx.virtualFolder.deleteMany({
 			where: {
 				userId,
 				parentId: { in: subIds },
 			},
 		});
 
-		return tx.virtualFolder.delete({
-			where: { id },
-		});
+		if (!isClear) {
+			await tx.virtualFolder.delete({
+				where: { id },
+			});
+			count++;
+		}
+		return count;
 	});
 }
 
@@ -130,12 +133,21 @@ async function upsert(
 
 async function copy(id: string, userId: number, targetParentId: string | null) {
 	const folder = await FolderRepo.getById(id, userId);
-
-	const folderMapping = await copyFolderStructure(folder, targetParentId);
-	return {
-		sourceId: folder.id,
-		newId: folderMapping.get(folder.id),
-		mapping: folderMapping,
-	};
+	return await copyFolderStructure(folder, targetParentId);
 }
 
+async function checkNameAvailable(where: { id: string; name: string } | { name: string; parentId: string | null; userId: number; category: string }) {
+	// 允许常见特殊符号，但不允许点号（.）
+	const regex = /^[a-zA-Z0-9\u4e00-\u9fa5!@#$%^&*()\-_+=[\]{},?/~`]+$/;
+	if (!regex.test(where.name)) {
+		throw new CustomError('文件名称不符合规范');
+	}
+	const existing = await prisma.virtualFolder.findFirst({
+		where,
+		select: { id: true },
+	});
+
+	if (existing) {
+		throw new CustomError('文件夹名称冲突');
+	}
+}

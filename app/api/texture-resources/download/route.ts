@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 import { readFile } from 'fs/promises';
 import { apiHandler } from '@/app/api/lib/api-handler';
 import { FolderRepo } from '@/app/api/virtual-folders/folder.repo';
-import { getAllSubfolderIds } from '@/app/api/virtual-folders/service';
-import { DIR_NAMES, FileStorage } from '@/lib/file-storage';
+import { getIncludeFolderIds } from '@/app/api/virtual-folders/service';
+import { FileStorage } from '@/lib/file-storage';
 import { TextureRepo } from '@/app/api/texture-resources/texture.repo';
-import { FileResponse, ZipResponse } from '@/app/api/lib/response';
+import { ZipResponse } from '@/app/api/lib/response';
 import { asyncPool } from '@/app/api/lib/utils';
+import { DIR_NAMES } from '@/lib/constants';
 
 const DownloadResourcesBody = z.object({
 	folderId: z.string().min(1, '缺少文件夹ID'),
@@ -21,7 +22,7 @@ export const POST = apiHandler({
 
 		const folder = await FolderRepo.getById(folderId, user.id);
 
-		const folderIds = await getAllSubfolderIds(prisma, folderId, user.id);
+		const folderIds = await getIncludeFolderIds(prisma, folderId, user.id);
 
 		const resources = await TextureRepo.getByFolderIds(folderIds, user.id);
 

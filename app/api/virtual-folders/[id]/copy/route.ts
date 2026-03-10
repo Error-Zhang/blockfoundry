@@ -18,8 +18,8 @@ export const POST = apiHandler({
 		const { id } = params;
 		const { targetParentId } = body;
 
-		const copyResult = await FolderRepo.copy(id, user.id, targetParentId || null);
+		const map = await FolderRepo.copy(id, user.id, targetParentId || null);
 
-		return SuccessResponse(copyResult);
+		return SuccessResponse(Object.fromEntries(map));
 	},
 });

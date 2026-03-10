@@ -24,6 +24,7 @@ export interface FileTreeProps<T = any> {
 	onContextMenuAction?: (action: string, node: TreeNode<T>) => void;
 
 	// 节点编辑
+	editingNode?: TreeNode<T>;
 	onNodeEdit?: (node: TreeNode<T>, newValue: string) => Promise<boolean>;
 	onCancelNodeEdit?: (node: TreeNode<T>) => void;
 
@@ -57,6 +58,7 @@ export function FileTree<T = any>({
 	defaultExpandAll = true,
 	contextMenuItems,
 	onContextMenuAction,
+	editingNode,
 	onNodeEdit,
 	onCancelNodeEdit,
 	draggable = true,
@@ -92,7 +94,7 @@ export function FileTree<T = any>({
 	};
 
 	// Hooks
-	const { editingNode, editingValue, startEdit, cancelEdit, updateValue } = useNodeEdit();
+	const { editing, startEdit, cancelEdit, updateValue } = useNodeEdit<T>(editingNode);
 	const {
 		visible: contextMenuVisible,
 		position: contextMenuPosition,
@@ -109,31 +111,24 @@ export function FileTree<T = any>({
 	const buildAntdTreeData = useCallback(
 		(nodes: TreeNode<T>[]): any[] => {
 			return nodes.map((node) => {
-				// 如果节点标记为编辑状态，自动开始编辑
-				if (node.isEditing && editingNode !== node.key) {
-					setTimeout(() => {
-						startEdit(node.key, node.title);
-					}, 0);
-				}
-
 				return {
 					title: (
 						<TreeNodeTitle
 							node={node}
-							isEditing={editingNode === node.key}
-							editingValue={editingValue}
+							isEditing={editing.key === node.key}
+							editingValue={editing.value}
 							onEditChange={updateValue}
 							onEditSave={async () => {
-								if (!editingValue.trim()) return;
+								if (!editing.value.trim()) return;
 
 								if (onNodeEdit) {
-									const success = await onNodeEdit(node, editingValue);
+									const success = await onNodeEdit(node, editing.value);
 									if (success) {
 										onEditCancel(node);
 									}
 								}
 							}}
-							onEditCancel={()=>onEditCancel(node)}
+							onEditCancel={() => onEditCancel(node)}
 							onContextMenu={(e) => showContextMenu(e, node.key)}
 							onDoubleClick={() => startEdit(node.key, node.title)}
 							className={styles.treeNodeTitle}
@@ -148,7 +143,7 @@ export function FileTree<T = any>({
 				};
 			});
 		},
-		[editingNode, editingValue, updateValue, onNodeEdit, cancelEdit, showContextMenu, startEdit, draggable]
+		[editing]
 	);
 
 	// 处理节点选择

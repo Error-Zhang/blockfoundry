@@ -104,7 +104,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 	const [isCreatingNewFolder, setIsCreatingNewFolder] = useState<boolean>(false);
 	const [rightClickedFolder, setRightClickedFolder] = useState<TreeNode<TFolder> | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-
+	const [editingNode, setEditingNode] = useState<TreeNode<TFile | TFolder>>();
 	// 加载虚拟文件夹
 	const loadVirtualFolders = async () => {
 		const data = await errorHandler.executeApi(() => apiService.getFolders());
@@ -149,7 +149,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		[files, virtualFolders, onNodeChange, onFolderSelect, errorHandler, apiService, rootFolder]
 	);
 
-	// 构建树数据
+	// 构建树数据 TODO:后端必须返回排好序的文件夹列表
 	const treeData = useMemo((): TreeNode<TFile | TFolder>[] => {
 		if (!rootFolder) return [];
 		const root: TreeNode<TFolder> = {
@@ -165,6 +165,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		const folderMap = new Map<string, TreeNode<TFile | TFolder>>();
 		folderMap.set(rootFolder.id, root);
 
+		let errorFlag;
 		// 创建文件夹节点
 		virtualFolders
 			.filter((vf) => vf.id !== rootFolder.id)
@@ -186,8 +187,14 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 
 				if (parentNode) {
 					parentNode.children!.push(folderNode);
+				} else {
+					errorFlag = true;
 				}
 			});
+		if (errorFlag) {
+			errorHandler.error('文件夹节点顺序有误');
+			return [];
+		}
 
 		// 创建文件节点
 		files.forEach((file) => {
@@ -231,13 +238,11 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 					nodeType: 'folder',
 					path: buildPath(rightClickedFolder.path, '新文件夹'),
 					icon: <FolderOutlined />,
-					isEditing: true,
 					children: [],
 					data: { parentId },
 				};
-
-				// immutable 更新
-				node.children = [tempNode, ...(node.children ?? [])];
+				node.children?.unshift(tempNode);
+				setEditingNode(tempNode);
 				return;
 			}
 
@@ -299,10 +304,10 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		[isCreatingNewFolder, rightClickedFolder, selectedFolder, treeData, virtualFolders, rootFolder, folderOperations, errorHandler]
 	);
 
-	const handleCancelNodeEdit = (node:TreeNode<TFile|TFolder>) => {
-		node.isEditing = false;
+	const handleCancelNodeEdit = (node: TreeNode<TFile | TFolder>) => {
 		setIsCreatingNewFolder(false);
 		setRightClickedFolder(null);
+		setEditingNode(undefined);
 	};
 
 	// 处理拖拽
@@ -452,9 +457,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 				case 'new_folder':
 					setRightClickedFolder(node as TreeNode<TFolder>);
 					setExpandedKeys([...expandedKeys, node.key]);
-					setTimeout(() => {
-						setIsCreatingNewFolder(true);
-					}, 0);
+					setIsCreatingNewFolder(true);
 					break;
 
 				case 'upload':
@@ -463,7 +466,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 					break;
 
 				case 'rename':
-					node.isEditing = true;
+					setEditingNode(node);
 					break;
 
 				case 'copy':
@@ -518,6 +521,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 				onContextMenuAction={handleContextMenuClick}
 				width={width}
 				onWidthChange={onWidthChange}
+				editingNode={editingNode}
 			/>
 			<input ref={fileInputRef} type="file" accept={fileUploadConfig?.accept || '*'} style={{ display: 'none' }} onChange={handleFileUpload} />
 		</>

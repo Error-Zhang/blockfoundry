@@ -17,7 +17,6 @@ export interface TreeNode<T = any> {
 	isLeaf?: boolean;
 	children?: TreeNode<T>[];
 	data?: T; // 节点关联的业务数据
-	isEditing?: boolean; // 是否处于编辑状态
 }
 
 /**
