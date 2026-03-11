@@ -1,7 +1,6 @@
 import { ApiResponse, del, get, post } from '@/lib/api';
-import { generateTextureUrl } from '@/lib/constants';
 
-export interface TextureAtlasListItem {
+export interface ITextureAtlas {
   id: string;
   name: string;
   description?: string;
@@ -16,8 +15,8 @@ export interface TextureAtlasListItem {
   fileSize: number;
 }
 
-export async function getTextureAtlases(): Promise<ApiResponse<TextureAtlasListItem[]>> {
-  return get<TextureAtlasListItem[]>('/api/texture-atlas');
+export async function getTextureAtlases(): Promise<ApiResponse<ITextureAtlas[]>> {
+  return get<ITextureAtlas[]>('/api/texture-atlas');
 }
 
 export async function deleteTextureAtlas(id: string): Promise<ApiResponse<void>> {
@@ -35,15 +34,7 @@ export interface GenerateAtlasParams {
 	format?: 'png' | 'webp' | 'jpeg';
 }
 
-export async function generateTextureAtlas(params: GenerateAtlasParams): Promise<
-	ApiResponse<{
-		imageUrl: string;
-		jsonUrl: string;
-		width: number;
-		height: number;
-		spriteCount: number;
-	}>
-> {
+export async function generateTextureAtlas(params: GenerateAtlasParams){
 	return post('/api/texture-atlas', params);
 }
 
@@ -83,26 +74,4 @@ export async function uploadTextureAtlas(file: File): Promise<ApiResponse<Upload
 	});
 
 	return await response.json();
-}
-
-export interface AtlasEditData {
-  atlasId?: string;
-  folderId: string;
-  folderName: string;
-  imageUrl: string;
-  jsonUrl: string;
-  width: number;
-  height: number;
-  spriteCount: number;
-  textures: Array<{
-    id: string;
-    name: string;
-    width: number;
-    height: number;
-    url: string;
-  }>;
-}
-
-export async function editTextureAtlas(folderId: string, folderName: string): Promise<ApiResponse<AtlasEditData>> {
-	return post<AtlasEditData>('/api/texture-atlas/generate', { folderId, folderName });
 }

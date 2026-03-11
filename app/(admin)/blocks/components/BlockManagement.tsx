@@ -19,7 +19,7 @@ export default function BlockManagement() {
 	const [searchText, setSearchText] = useState('');
 	const [form] = Form.useForm();
 
-	const { loading, handle: loadBlocks } = useAsyncAction(getBlocks, {
+	const { loading, handler: loadBlocks } = useAsyncAction(getBlocks, {
 		onSuccess: (data) => setBlocks(data!.blocks),
 	});
 
@@ -27,7 +27,7 @@ export default function BlockManagement() {
 		loadBlocks();
 	}, []);
 
-	const { loading: saving, handle: handleSave } = useAsyncAction(
+	const { loading: saving, handler: handleSave } = useAsyncAction(
 		async (values: any) => {
 			if (editingBlock) {
 				return await updateBlock(editingBlock.id, values);
@@ -46,7 +46,7 @@ export default function BlockManagement() {
 		}
 	);
 
-	const { handle: handleDelete } = useAsyncAction(deleteBlock, {
+	const { handler: handleDelete } = useAsyncAction(deleteBlock, {
 		onSuccess: () => {
 			message.success('方块删除成功');
 			loadBlocks();

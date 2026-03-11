@@ -1,10 +1,10 @@
-import { TextureResource } from './types';
+import { ITextureResource } from './interface';
 
 /**
  * 下载纹理资源文件
  * @param resource 纹理资源对象
  */
-export const downloadTextureResource = (resource: TextureResource): void => {
+export const downloadTextureResource = (resource: ITextureResource): void => {
 	try {
 		// 创建一个临时的 a 标签来触发下载
 		const link = document.createElement('a');
@@ -18,6 +18,5 @@ export const downloadTextureResource = (resource: TextureResource): void => {
 		document.body.removeChild(link);
 	} catch (error) {
 		console.error('下载文件失败:', error);
-		throw error;
 	}
 };

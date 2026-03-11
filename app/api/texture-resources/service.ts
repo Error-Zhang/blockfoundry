@@ -32,11 +32,11 @@ const processSingleTexture = async (
 
 	if (existingFile) {
 		savedFileName = existingFile.fileName;
-		filePath = FileStorage.getPath(DIR_NAMES.TEXTURES, savedFileName);
+		filePath = FileStorage.getFilePath(DIR_NAMES.TEXTURES, savedFileName);
 	} else {
 		const timestamp = Date.now();
 		savedFileName = `${timestamp}_${params.name}`;
-		filePath = FileStorage.getPath(DIR_NAMES.TEXTURES, savedFileName);
+		filePath = FileStorage.getFilePath(DIR_NAMES.TEXTURES, savedFileName);
 		await writeFileSafe(filePath, buffer);
 	}
 
@@ -124,7 +124,7 @@ export const formatTextureResponse = (resource: TextureResourceModel) => {
 	return {
 		...resource,
 		tags: resource.tags ? JSON.parse(resource.tags) : [],
-		url: FileStorage.getUrl(DIR_NAMES.TEXTURES, resource.fileName),
+		url: FileStorage.getFileUrl(DIR_NAMES.TEXTURES, resource.fileName),
 		createdAt: resource.createdAt.toISOString().split('T')[0],
 		updatedAt: resource.updatedAt.toISOString().split('T')[0],
 	};

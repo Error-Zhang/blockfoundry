@@ -15,7 +15,7 @@ const UploadTextureFormData = z.object({
 	folderId: z.string(),
 	file: z.instanceof(File),
 	name: z.string().optional(),
-	tags: z.array(z.string()).optional(),
+	tags: z.array(z.string()).optional().default([]),
 	isPublic: z.boolean().optional(),
 });
 
@@ -49,7 +49,7 @@ export const POST = apiHandler({
 			formData.file,
 			{
 				name,
-				tags: formData.tags,
+				tags: formData.tags.toString(),
 				isPublic: formData.isPublic ?? true,
 				folderId: formData.folderId,
 			},

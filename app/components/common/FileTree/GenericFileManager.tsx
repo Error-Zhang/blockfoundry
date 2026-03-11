@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import { ClipboardData, ContextMenuItem, DragInfo, FileTree, TreeNode } from '@/app/components/common/FileTree/index';
 import { FileManagerApiService, FileTreeOperations } from '@/app/components/common/FileTree/FileTreeOperations';
-import { useErrorHandler } from '@/app/utils/errorHandler';
+import { useErrorHandler } from '@/app/components/common/FileTree/errorHandler';
 import { buildPath } from '@/app/components/common/FileTree/treeUtils';
 
 /**
@@ -40,6 +40,8 @@ export interface BaseFileResource {
  * 配置接口
  */
 export interface FileManagerConfig<TFile extends BaseFileResource, TFolder extends BaseVirtualFolder> {
+	title?: string;
+
 	// 数据源
 	files: TFile[];
 
@@ -80,6 +82,7 @@ export interface FileManagerConfig<TFile extends BaseFileResource, TFolder exten
  * 通用文件管理器组件
  */
 export function GenericFileManager<TFile extends BaseFileResource, TFolder extends BaseVirtualFolder>({
+	title,
 	files,
 	onNodeChange,
 	apiService,
@@ -152,6 +155,8 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 	// 构建树数据 TODO:后端必须返回排好序的文件夹列表
 	const treeData = useMemo((): TreeNode<TFile | TFolder>[] => {
 		if (!rootFolder) return [];
+
+		// 1. 构建根节点
 		const root: TreeNode<TFolder> = {
 			key: 'root',
 			title: rootFolder.name,
@@ -165,65 +170,61 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 		const folderMap = new Map<string, TreeNode<TFile | TFolder>>();
 		folderMap.set(rootFolder.id, root);
 
-		let errorFlag;
-		// 创建文件夹节点
-		virtualFolders
-			.filter((vf) => vf.id !== rootFolder.id)
-			.forEach((vFolder) => {
-				const folderNode: TreeNode<TFolder> = {
-					key: `folder-${vFolder.id}`,
-					title: vFolder.name,
-					nodeType: 'folder',
-					path: vFolder.path,
-					icon: <FolderOutlined />,
-					children: [],
-					data: vFolder,
-				};
+		// 1.先创建所有文件夹节点
+		const validFolders = virtualFolders.filter((vf) => vf.id !== rootFolder.id);
+		validFolders.forEach((vFolder) => {
+			const folderNode: TreeNode<TFolder> = {
+				key: `folder-${vFolder.id}`,
+				title: vFolder.name,
+				nodeType: 'folder',
+				path: vFolder.path,
+				icon: <FolderOutlined />,
+				children: [],
+				data: vFolder,
+			};
+			folderMap.set(vFolder.id, folderNode);
+		});
 
-				folderMap.set(vFolder.id, folderNode);
+		// 2.统一挂载文件夹父子关系
+		validFolders.forEach((vFolder) => {
+			const parentId = vFolder.parentId;
+			const parentNode = folderMap.get(parentId);
+			const currNode = folderMap.get(vFolder.id)!;
 
-				// 找到父节点并添加
-				const parentNode = folderMap.get(vFolder.parentId || rootFolder.id);
+			if (parentNode) {
+				parentNode.children!.push(currNode);
+			} else {
+				errorHandler.warning('存在游离文件夹节点', currNode);
+			}
+		});
 
-				if (parentNode) {
-					parentNode.children!.push(folderNode);
-				} else {
-					errorFlag = true;
-				}
-			});
-		if (errorFlag) {
-			errorHandler.error('文件夹节点顺序有误');
-			return [];
-		}
-
-		// 创建文件节点
+		// 3.挂载文件节点
 		files.forEach((file) => {
-			const fileName = file.name;
-			// 根据 folderId 找到父节点
-			const folder = virtualFolders.find((f) => f.id === file.folderId);
-			if (!folder) return;
+			const parentNode = folderMap.get(file.folderId);
+			if (!parentNode) {
+				errorHandler.warning('存在游离文件节点', file);
+				return;
+			}
 
+			const fileName = file.name;
 			const fileNode: TreeNode<TFile> = {
 				key: `file-${file.id}`,
 				title: fileName,
 				nodeType: 'file',
-				path: buildPath(folder.path, fileName),
+				path: buildPath(parentNode.path, fileName),
 				icon: fileIcon,
 				isLeaf: true,
 				data: file,
 			};
 
-			const parentNode = folderMap.get(file.folderId || rootFolder.id);
-			if (parentNode) {
-				parentNode.children!.push(fileNode);
-			}
+			parentNode.children!.push(fileNode);
 		});
 
-		// 添加临时新建文件夹节点
+		// 注入临时文件夹
 		injectTempFolder(root);
 
 		return [root];
-	}, [files, virtualFolders, rootFolder, isCreatingNewFolder, fileIcon]);
+	}, [files, virtualFolders, rootFolder, fileIcon, injectTempFolder]);
 
 	function injectTempFolder(root: TreeNode) {
 		if (!isCreatingNewFolder || !rightClickedFolder) return;
@@ -509,6 +510,7 @@ export function GenericFileManager<TFile extends BaseFileResource, TFolder exten
 	return (
 		<>
 			<FileTree
+				title={title}
 				treeData={treeData}
 				selectedKeys={selectedKeys}
 				expandedKeys={expandedKeys}

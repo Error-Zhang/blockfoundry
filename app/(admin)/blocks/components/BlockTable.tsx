@@ -39,7 +39,7 @@ const BlockTable: React.FC<BlockTableProps> = ({
 			render: (text: string, record: BlockDefinition) => (
 				<div>
 					<div className={styles.resourceName}>{text}</div>
-					<div className={styles.resourceFilename}>{record.description}</div>
+					<div className={styles.resourceDetail}>{record.description}</div>
 				</div>
 			),
 		},

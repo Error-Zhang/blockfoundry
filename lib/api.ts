@@ -1,7 +1,6 @@
 /**
  * API 请求封装
  */
-
 export interface ApiResponse<T = any> {
 	success: boolean;
 	data?: T;
@@ -24,65 +23,84 @@ export class ApiError extends Error {
 /**
  * 基础请求方法
  */
-async function request<T = any>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
-	const response = await fetch(url, {
+export async function request<T = any>(url: string, options?: RequestInit & { responseType?: 'json' | 'blob' | 'text'; data?: any }): Promise<T> {
+	const responseType = options?.responseType;
+
+	const init: RequestInit = {
 		...options,
 		headers: {
 			...options?.headers,
+			// POST/PUT 自动加 JSON 请求头
+			...((options?.method === 'POST' || options?.method === 'PUT') && {
+				'Content-Type': 'application/json',
+			}),
 		},
-	});
+		// 有 data 就自动序列化 body
+		...(options?.data && { body: JSON.stringify(options.data) }),
+	};
 
-	// 检查响应的 content-type
-	const contentType = response.headers.get('content-type');
-	if (!contentType || !contentType.includes('application/json')) {
-		const text = await response.text();
-		throw new ApiError(`服务器返回非 JSON 响应: ${text.substring(0, 100)}`, response.status);
+	const response = await fetch(url, init);
+
+	if (!response.ok) {
+		throw new ApiError(`请求失败 ${response.status}`, response.status);
 	}
 
-	return await response.json();
+	switch (responseType) {
+		case 'blob':
+			return (await response.blob()) as T;
+
+		case 'text':
+			return (await response.text()) as T;
+
+		case 'json':
+		default:
+			return (await response.json()) as T;
+	}
+}
+
+
+
+/**
+ * POST 请求
+ */
+export async function post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
+	return request<ApiResponse<T>>(url, {
+		method: 'POST',
+		data,
+	});
+}
+
+/**
+ * PUT 请求
+ */
+export async function put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
+	return request<ApiResponse<T>>(url, {
+		method: 'PUT',
+		data
+	});
+}
+
+
+function buildUrlWithParams(url: string, params?: Record<string, any>) {
+	if (!params) return url;
+	// 过滤 null/undefined 参数
+	const cleanParams = Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null));
+	const searchParams = new URLSearchParams(cleanParams).toString();
+	return searchParams ? `${url}?${searchParams}` : url;
 }
 
 /**
  * GET 请求
  */
 export async function get<T = any>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-	const cleanParams = params ? Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== undefined && v !== null)) : undefined;
-	const searchParams = cleanParams ? new URLSearchParams(cleanParams).toString() : '';
-	const fullUrl = searchParams ? `${url}?${searchParams}` : url;
-	return request<T>(fullUrl, { method: 'GET' });
-}
-
-/**
- * POST 请求 (JSON)
- */
-export async function post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-	return request<T>(url, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(data),
-	});
-}
-
-/**
- * PUT 请求 (JSON)
- */
-export async function put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-	return request<T>(url, {
-		method: 'PUT',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(data),
-	});
+	return request<ApiResponse<T>>(buildUrlWithParams(url, params), { method: 'GET' });
 }
 
 /**
  * DELETE 请求
  */
-export async function del<T = any>(url: string): Promise<ApiResponse<T>> {
-	return request<T>(url, { method: 'DELETE' });
+export async function del<T = any>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+	return request<ApiResponse<T>>(buildUrlWithParams(url, params), { method: 'DELETE' });
 }
 
 /**
@@ -157,7 +175,7 @@ export async function upload<T = any>(url: string, formData: FormData, onProgres
 	}
 
 	// 不需要进度回调时使用 fetch
-	return request<T>(url, {
+	return request<ApiResponse<T>>(url, {
 		method: 'POST',
 		body: formData,
 	});

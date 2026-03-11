@@ -8,7 +8,7 @@ import ResourceTable from './components/ResourceTable';
 import EditModal from './components/EditModal';
 import PreviewModal from './components/PreviewModal';
 import BatchUploadModal from './components/BatchUploadModal';
-import { TextureResource } from './lib/types';
+import { ITextureResource } from './lib/interface';
 import { downloadTextureResource } from './lib/utils';
 import {
 	createTextureResource,
@@ -22,14 +22,16 @@ import { useAsyncAction } from '@/app/hooks/useAsyncAction';
 import MergeAtlasModal from './components/MergeAtlasModal';
 import { useReactiveSet } from '@/app/hooks/useReactiveSet';
 import { generateTextureAtlas } from '@/app/(admin)/texture-atlas/services/textureAtlasService';
+import { useSidebarWidth } from '@/app/(admin)/texture-resources/hooks/useSidebarWidth';
+import { triggerDownload } from '@/app/components/common/FileTree/treeUtils';
 
 export default function TextureResourceManagementPage() {
 	const { message } = App.useApp();
-	const [resources, setResources] = useState<TextureResource[]>([]);
+	const [resources, setResources] = useState<ITextureResource[]>([]);
 	const [modalVisible, setModalVisible] = useState(false);
-	const [editingResource, setEditingResource] = useState<TextureResource | null>(null);
+	const [editingResource, setEditingResource] = useState<ITextureResource | null>(null);
 	const [previewVisible, setPreviewVisible] = useState(false);
-	const [previewResource, setPreviewResource] = useState<TextureResource | null>(null);
+	const [previewResource, setPreviewResource] = useState<ITextureResource | null>(null);
 	const [batchUploadVisible, setBatchUploadVisible] = useState(false);
 	const [searchText, setSearchText] = useState('');
 	const [currentFolderId, setCurrentFolderId] = useState<string>(null!);
@@ -38,24 +40,15 @@ export default function TextureResourceManagementPage() {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const highlightSet = useReactiveSet<string>();
 	const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-	const [selectedRows, setSelectedRows] = useState<TextureResource[]>([]);
+	const [selectedRows, setSelectedRows] = useState<ITextureResource[]>([]);
 	const [mergeAtlasVisible, setMergeAtlasVisible] = useState(false);
 
-	// 侧边栏宽度状态
-	const [sidebarWidth, setSidebarWidth] = useState(300);
-
-	// 从 localStorage 加载宽度
-	useEffect(() => {
-		const saved = localStorage.getItem('texture-sidebar-width');
-		if (saved) {
-			setSidebarWidth(parseInt(saved, 10));
-		}
-	}, []);
+	const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
 
 	const [form] = Form.useForm();
 
 	// 加载纹理资源
-	const { loading, handle: loadResources } = useAsyncAction(getTextureResources, {
+	const { loading, handler: loadResources } = useAsyncAction(getTextureResources, {
 		onSuccess: (data) => {
 			setResources(data!.resources);
 			setTotalCount(data!.totalCount);
@@ -111,11 +104,11 @@ export default function TextureResourceManagementPage() {
 	}
 
 	// 处理新建/编辑
-	const { loading: modelLoadingUpdate, handle: handleEditResource } = useAsyncAction(updateTextureResource, {
+	const { loading: modelLoadingUpdate, handler: handleEditResource } = useAsyncAction(updateTextureResource, {
 		onSuccess,
 	});
 
-	const { loading: modelLoadingCreate, handle: handleCreateResource } = useAsyncAction(createTextureResource, {
+	const { loading: modelLoadingCreate, handler: handleCreateResource } = useAsyncAction(createTextureResource, {
 		onSuccess,
 	});
 
@@ -144,27 +137,21 @@ export default function TextureResourceManagementPage() {
 	};
 
 	// 处理编辑
-	const handleEdit = (resource: TextureResource) => {
+	const handleEdit = (resource: ITextureResource) => {
 		setEditingResource(resource);
 		form.setFieldsValue(resource);
 		setModalVisible(true);
 	};
 
 	// 处理删除
-	const { handle: handleDelete } = useAsyncAction(deleteTextureResource, {
+	const { handler: handleDelete } = useAsyncAction(deleteTextureResource, {
 		onSuccess: () => loadResources(currentFolderId),
 	});
 
 	// 处理预览
-	const handlePreview = (resource: TextureResource) => {
+	const handlePreview = (resource: ITextureResource) => {
 		setPreviewResource(resource);
 		setPreviewVisible(true);
-	};
-
-	// 处理下载
-	const handleDownload = (resource: TextureResource) => {
-		downloadTextureResource(resource);
-		message.success('开始下载文件');
 	};
 
 	// 处理批量上传
@@ -181,17 +168,13 @@ export default function TextureResourceManagementPage() {
 	};
 
 	const handleOpenMergeAtlasModal = () => {
-		if (!selectedRowKeys.length) {
-			message.warning('请先选择要合并的纹理资源');
-			return;
-		}
 		const filters = selectedRows.filter((row) => {
 			if (!row.isPublic) highlightSet?.add(row.id);
 			return row.isPublic;
 		});
 		if (filters.length !== selectedRows.length) {
 			message.warning({
-				content: `${selectedRows.length - filters.length}项不可用`,
+				content: `${selectedRows.length - filters.length}项资源不可用`,
 				duration: 3,
 				onClose: () => {
 					highlightSet?.clear();
@@ -202,38 +185,29 @@ export default function TextureResourceManagementPage() {
 		setMergeAtlasVisible(true);
 	};
 
-	const handleGenerateAtlas = async (values: { name: string; width: number; height?: number; padding: number; gridSize?: number; alignPowerOfTwo?: boolean; format?: 'png' | 'webp' | 'jpeg' }) => {
-
-		try {
-			const atlasName = values.name || `纹理图集_${Date.now()}`;
-			const result = await generateTextureAtlas({
-				textureIds: selectedRowKeys.map(String),
-				name: atlasName,
-				padding: values.padding,
-				maxWidth: values.width,
-				maxHeight: values.height,
-				gridSize: values.gridSize,
-				alignPowerOfTwo: values.alignPowerOfTwo,
-				format: values.format,
-			});
-			if (!result.success || !result.data) {
-				message.error(result.error || '生成纹理图集失败');
-				return;
-			}
-			message.success(`已生成图集: ${atlasName}`);
+	const { handler: handleGenerateTextureAtlas } = useAsyncAction(generateTextureAtlas, {
+		showSuccessMessage: '图集创建成功',
+		onSuccess: () => {
 			setSelectedRowKeys([]);
 			setSelectedRows([]);
 			setMergeAtlasVisible(false);
-		} catch (e) {
-			message.error('生成纹理图集过程中发生错误');
-		}
+		},
+	});
+
+	const handleGenerateAtlas = async (values: { name: string; width: number; height?: number; padding: number; gridSize?: number; alignPowerOfTwo?: boolean; format?: 'png' | 'webp' | 'jpeg' }) => {
+		await handleGenerateTextureAtlas({
+			textureIds: selectedRowKeys.map(String),
+			name: values.name || `纹理图集_${Date.now()}`,
+			padding: values.padding,
+			maxWidth: values.width,
+			maxHeight: values.height,
+			gridSize: values.gridSize,
+			alignPowerOfTwo: values.alignPowerOfTwo,
+			format: values.format,
+		});
 	};
 
-	// 处理侧边栏宽度变化
-	const handleSidebarWidthChange = (width: number) => {
-		setSidebarWidth(width);
-		localStorage.setItem('texture-sidebar-width', width.toString());
-	};
+
 
 	// 统计数据卡片配置
 	const cardConfigs = [
@@ -277,16 +251,13 @@ export default function TextureResourceManagementPage() {
 					<DirectoryTree
 						resources={resources}
 						onResourceSelect={(resource) => {
-							if (resource) {
-								highlightSet.add(resource.id);
-								// 3秒后清除高亮
-								setTimeout(() => highlightSet.delete(resource.id), 3000);
-							}
+							highlightSet.add(resource.id);
+							setTimeout(() => highlightSet.delete(resource.id), 3000);
 						}}
 						onFolderSelect={(folder) => setCurrentFolderId(folder.id)}
 						onResourceChange={() => loadResources(currentFolderId)}
 						width={sidebarWidth}
-						onWidthChange={handleSidebarWidthChange}
+						onWidthChange={setSidebarWidth}
 					/>
 				</div>
 				<div className={styles.tableContainer}>
@@ -304,7 +275,9 @@ export default function TextureResourceManagementPage() {
 						onPreview={handlePreview}
 						onEdit={handleEdit}
 						onDelete={handleDelete}
-						onDownload={handleDownload}
+						onDownload={(resource) => {
+							triggerDownload(resource.url, resource.fileName);
+						}}
 						onUpload={handleUpload}
 						onBatchUpload={handleBatchUploadOpen}
 						isExpanded={isExpanded}

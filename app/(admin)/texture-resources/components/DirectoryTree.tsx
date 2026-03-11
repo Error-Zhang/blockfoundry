@@ -1,7 +1,6 @@
 import React from 'react';
 import { FileImageOutlined } from '@ant-design/icons';
-import { TextureResource } from '../lib/types';
-import { downloadTextureResource } from '../lib/utils';
+import { ITextureResource } from '../lib/interface';
 import {
 	copyVirtualFolder,
 	createVirtualFolder,
@@ -21,10 +20,11 @@ import {
 	clearTextureResourceInFolder,
 } from '../services/textureResourceService';
 import { FileManagerApiService, GenericFileManager } from '@/app/components/common/FileTree';
+import { triggerDownload } from '@/app/components/common/FileTree/treeUtils';
 
 interface DirectoryTreeProps {
-	resources: TextureResource[];
-	onResourceSelect?: (resource: TextureResource) => void;
+	resources: ITextureResource[];
+	onResourceSelect?: (resource: ITextureResource) => void;
 	onResourceChange?: () => void;
 	onFolderSelect?: (folder: VirtualFolder) => void;
 	width?: number;
@@ -44,7 +44,7 @@ const clearOrDeleteFolder = async (folderId: string,isClear:boolean) => {
 };
 
 // 创建 API 服务适配器
-const createTextureApiService = (): FileManagerApiService<TextureResource, VirtualFolder> => ({
+const createTextureApiService = (): FileManagerApiService<ITextureResource, VirtualFolder> => ({
 	// 文件夹操作
 	getFolders: (parentId?: string) => getVirtualFolders('texture', parentId),
 	createFolder: (name: string, parentId: string) => createVirtualFolder(name, parentId, 'texture'),
@@ -73,7 +73,8 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 	onWidthChange,
 }) => {
 	return (
-		<GenericFileManager<TextureResource, VirtualFolder>
+		<GenericFileManager<ITextureResource, VirtualFolder>
+			title='纹理目录'
 			files={resources}
 			apiService={createTextureApiService()}
 			onFileSelect={onResourceSelect}
@@ -89,7 +90,6 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 					return {
 						file,
 						name: fileName,
-						description: '',
 						tags: [],
 						isPublic: true,
 						folderId,
@@ -97,7 +97,9 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 				},
 			}}
 			fileIcon={<FileImageOutlined />}
-			downloadFile={downloadTextureResource}
+			downloadFile={(resource)=>{
+				triggerDownload(resource.url,resource.fileName)
+			}}
 			width={width}
 			onWidthChange={onWidthChange}
 		/>

@@ -5,7 +5,7 @@ import { SuccessResponse } from '@/app/api/lib/response';
 const UploadTexturesFormData = z.object({
 	folderId: z.string(),
 	files: z.union([z.instanceof(File), z.array(z.instanceof(File))]).transform((v) => (Array.isArray(v) ? v : [v])),
-	tags: z.array(z.string()).optional(),
+	tags: z.array(z.string()).optional().default([]),
 });
 
 export const POST = apiHandler({
@@ -16,7 +16,7 @@ export const POST = apiHandler({
 				file,
 				name: file.name,
 				folderId: formData.folderId,
-				tags: formData.tags,
+				tags: formData.tags.toString(),
 				isPublic: true,
 			})),
 			user.id

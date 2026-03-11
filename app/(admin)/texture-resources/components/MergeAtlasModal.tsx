@@ -23,10 +23,6 @@ const MergeAtlasModal: React.FC<MergeAtlasModalProps> = ({ visible, selectedCoun
 	const handleOk = async () => {
 		if (submitting) return;
 		const values = await form.validateFields();
-		if (selectedCount < 2) {
-			message.warning('请选择多个要合并的纹理资源');
-			return;
-		}
 		try {
 			setSubmitting(true);
 			await onSubmit(values);
@@ -56,14 +52,14 @@ const MergeAtlasModal: React.FC<MergeAtlasModalProps> = ({ visible, selectedCoun
 					form={form}
 					layout="vertical"
 					initialValues={{
-						name: '纹理图集',
+						name: '',
 						width: 1024,
 						padding: 0,
 						format: 'png',
 					}}
 				>
-					<Form.Item name="name" label="图集名称" rules={[{ required: true }]}>
-						<Input placeholder="请输入图集名称" />
+					<Form.Item name="name" label="图集名称">
+						<Input placeholder="可选：若无则自动生成" />
 					</Form.Item>
 					<Form.Item name="width" label="图集最大宽度" rules={[{ required: true, type: 'number', min: 64, max: 8192 }]}>
 						<InputNumber style={{ width: '100%' }} placeholder="例如 1024" />

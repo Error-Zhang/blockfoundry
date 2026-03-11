@@ -16,7 +16,7 @@ export function useAsyncAction<Fn extends (...args: any[]) => Promise<ApiRespons
 	const [error, setError] = useState('');
 	const { message } = App.useApp();
 
-	const handle = async (...args: Parameters<Fn>) => {
+	const handler = async (...args: Parameters<Fn>) => {
 		setError('');
 		setLoading(true);
 
@@ -38,5 +38,5 @@ export function useAsyncAction<Fn extends (...args: any[]) => Promise<ApiRespons
 		}
 	};
 
-	return { handle, loading, setLoading, error, setError };
+	return { handler, loading, setLoading, error, setError };
 }

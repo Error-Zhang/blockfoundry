@@ -2,21 +2,21 @@
  * 纹理资源 API 服务
  */
 
-import { ApiResponse, createFormData, del, FormDataBuilder, get, post, put, upload } from '@/lib/api';
-import type { TextureResource } from '../lib/types';
+import { ApiResponse, createFormData, del, get, post, put, request, upload } from '@/lib/api';
+import type { ITextureResource } from '../lib/interface';
 
 /**
  * 获取纹理资源列表
  */
 export async function getTextureResources(folderId: string) {
-	return get<{ totalCount: number; resources: TextureResource[] }>('/api/texture-resources', { folderId });
+	return get<{ totalCount: number; resources: ITextureResource[] }>('/api/texture-resources', { folderId });
 }
 
 /**
  * 获取单个纹理资源
  */
 export async function getTextureResource(id: string) {
-	return get<TextureResource>(`/api/texture-resources/${id}`);
+	return get<ITextureResource>(`/api/texture-resources/${id}`);
 }
 
 /**
@@ -30,16 +30,16 @@ export interface CreateTextureResourceParams {
 	folderId: string;
 }
 
-export async function createTextureResource(params: CreateTextureResourceParams | any): Promise<ApiResponse<TextureResource>> {
+export async function createTextureResource(params: CreateTextureResourceParams | any): Promise<ApiResponse<ITextureResource>> {
 	const formData = createFormData(params);
-	return upload<TextureResource>('/api/texture-resources', formData);
+	return upload<ITextureResource>('/api/texture-resources', formData);
 }
 
 /**
  * 更新纹理资源
  */
-export async function updateTextureResource(id: string, data: Partial<TextureResource>): Promise<ApiResponse<TextureResource>> {
-	return put<TextureResource>(`/api/texture-resources/${id}`, data);
+export async function updateTextureResource(id: string, data: Partial<ITextureResource>): Promise<ApiResponse<ITextureResource>> {
+	return put<ITextureResource>(`/api/texture-resources/${id}`, data);
 }
 
 /**
@@ -70,7 +70,7 @@ export async function batchUploadTextureResources(
 		results: {
 			success: boolean;
 			error?: string;
-			data: TextureResource;
+			data: ITextureResource;
 			fileName: string;
 		}[];
 	}>('/api/texture-resources/batch', formData, onProgress);
@@ -86,8 +86,8 @@ export async function getTags() {
 /**
  * 复制纹理资源
  */
-export async function copyTextureResource(id: string, targetFolderId?: string): Promise<ApiResponse<TextureResource>> {
-	return await put<TextureResource>('/api/texture-resources', {
+export async function copyTextureResource(id: string, targetFolderId?: string): Promise<ApiResponse<ITextureResource>> {
+	return await put<ITextureResource>('/api/texture-resources', {
 		sourceId: id,
 		targetFolderId,
 	});
@@ -97,17 +97,11 @@ export async function copyTextureResource(id: string, targetFolderId?: string): 
  * 下载文件夹中的纹理资源
  */
 export async function downloadFolderResources(folderId: string): Promise<Blob> {
-	const response = await fetch('/api/texture-resources/download', {
+	return await request<Blob>('/api/texture-resources/download', {
+		responseType: 'blob',
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ folderId }),
+		data: { folderId },
 	});
-
-	if (!response.ok) {
-		throw new Error('下载失败');
-	}
-
-	return response.blob();
 }
 
 /**
@@ -123,8 +117,8 @@ export async function clearTextureResourceInFolder(folderId: string): Promise<Ap
 export async function copyFolderResources(
 	sourceFolderId: string,
 	folderMapping: Record<string, string>
-): Promise<ApiResponse<{ count: number; resources: TextureResource[] }>> {
-	return post<{ count: number; resources: TextureResource[] }>('/api/texture-resources/copy-folder', {
+): Promise<ApiResponse<{ count: number; resources: ITextureResource[] }>> {
+	return post<{ count: number; resources: ITextureResource[] }>('/api/texture-resources/copy-folder', {
 		sourceFolderId,
 		folderMapping,
 	});

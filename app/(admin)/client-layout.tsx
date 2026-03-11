@@ -33,6 +33,11 @@ const menuItems = [
 		label: '纹理资源管理',
 	},
 	{
+		key: '/texture-atlas',
+		icon: <PictureOutlined />,
+		label: '纹理图集管理',
+	},
+	{
 		key: '/materials',
 		icon: <PictureOutlined />,
 		label: '材质管理',
@@ -41,11 +46,6 @@ const menuItems = [
 		key: '/blocks',
 		icon: <AppstoreOutlined />,
 		label: '方块管理',
-	},
-	{
-		key: '/texture-atlas',
-		icon: <PictureOutlined />,
-		label: '纹理图集管理',
 	},
 	{
 		key: '/settings',

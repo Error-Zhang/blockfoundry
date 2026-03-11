@@ -16,8 +16,8 @@ import { TextureResourceModel } from '@/app/api/texture-resources/interface';
 
 export const formatAtlasResponse = (atlas: TextureAtlasModel) => ({
 	...atlas,
-	imageUrl: FileStorage.getUrl(DIR_NAMES.ATLASES, atlas.name, atlas.format.toLowerCase()),
-	jsonUrl: FileStorage.getUrl(DIR_NAMES.ATLASES, atlas.name, 'json'),
+	imageUrl: FileStorage.getFileUrl(DIR_NAMES.ATLASES, atlas.name, atlas.format.toLowerCase()),
+	jsonUrl: FileStorage.getFileUrl(DIR_NAMES.ATLASES, atlas.name, 'json'),
 	createdAt: atlas.createdAt.toISOString().split('T')[0],
 	updatedAt: atlas.updatedAt.toISOString().split('T')[0],
 });
@@ -27,6 +27,7 @@ type LayoutItem = {
 	name: string;
 	width: number;
 	height: number;
+	fileName: string;
 	filePath: string;
 };
 
@@ -56,7 +57,7 @@ const buildAtlasLayout = (textures: LayoutItem[], padding = 0, maxWidth = 1024) 
 
 		sprites.push({
 			id: tex.id,
-			name: tex.name,
+			name: tex.fileName,
 			x,
 			y,
 			width: tex.width,
@@ -94,8 +95,8 @@ const renderAtlasImage = async (width: number, height: number, overlays: sharp.O
 };
 
 const saveAtlasFiles = async (name: string, format: 'png' | 'webp', imageBuffer: Buffer, jsonPayload: any) => {
-	await FileStorage.writeFile(FileStorage.getPath(DIR_NAMES.ATLASES, name, format), imageBuffer);
-	await FileStorage.writeFile(FileStorage.getPath(DIR_NAMES.ATLASES, name, 'json'), JSON.stringify(jsonPayload, null, 2));
+	await FileStorage.writeFile(FileStorage.getFilePath(DIR_NAMES.ATLASES, name, format), imageBuffer);
+	await FileStorage.writeFile(FileStorage.getFilePath(DIR_NAMES.ATLASES, name, 'json'), JSON.stringify(jsonPayload, null, 2));
 
 	return imageBuffer.length;
 };
@@ -125,7 +126,7 @@ const createAtlasInternal = async (
 	}
 
 	const jsonPayload = {
-		name,
+		name: base.name,
 		width: atlasWidth,
 		height: atlasHeight,
 		sprites,
@@ -148,13 +149,13 @@ const createAtlasInternal = async (
 	return atlas;
 };
 
-export const createAtlas = async (base: { name: string; userId: number; relatedFolderId: string; textures:TextureResourceModel[] }, options: { format?: 'png' | 'webp' }) => {
+export const createAtlas = async (
+	base: { name: string; userId: number; relatedFolderId: string; textures: TextureResourceModel[] },
+	options: { format?: 'png' | 'webp' }
+) => {
 	const layoutItems: LayoutItem[] = base.textures.map((t) => ({
-		id: t.id,
-		name: t.name,
-		width: t.width,
-		height: t.height,
-		filePath: FileStorage.getPath(DIR_NAMES.TEXTURES, t.fileName),
+		...t,
+		filePath: FileStorage.getFilePath(DIR_NAMES.TEXTURES, t.fileName),
 	}));
 
 	return createAtlasInternal(base, layoutItems, options.format);
@@ -163,8 +164,8 @@ export const createAtlas = async (base: { name: string; userId: number; relatedF
 export const deleteAtlas = async (id: string, userId: number) => {
 	const atlas = await AtlasRepo.getById(id, userId);
 
-	await FileStorage.delete(DIR_NAMES.ATLASES, atlas.name, atlas.format);
-	await FileStorage.delete(DIR_NAMES.ATLASES, atlas.name, 'json');
+	await FileStorage.deleteFile(DIR_NAMES.ATLASES, atlas.name, atlas.format);
+	await FileStorage.deleteFile(DIR_NAMES.ATLASES, atlas.name, 'json');
 
 	await AtlasRepo.delete(id, userId);
 

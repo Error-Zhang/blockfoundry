@@ -1,11 +1,11 @@
 import React from 'react';
 import { Col, Descriptions, Divider, Image, Modal, Row, Space, Tag } from 'antd';
-import { TextureResource } from '../lib/types';
+import { ITextureResource } from '../lib/interface';
 import styles from '../../../styles/Modals.module.scss';
 
 interface PreviewModalProps {
 	visible: boolean;
-	resource: TextureResource | null;
+	resource: ITextureResource | null;
 	onCancel: () => void;
 }
 

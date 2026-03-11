@@ -31,7 +31,7 @@ const contentTypeMap: Record<string, string> = {
 
 export const GET = withErrorHandler(async (request: NextRequest, props: { params: Promise<{ path: string[] }> }) => {
 	const params = await props.params;
-	const baseDir = FileStorage.getDir(DIR_NAMES.UPLOADS);
+	const baseDir = FileStorage.getFileDir(DIR_NAMES.UPLOADS);
 	const filePath = join(baseDir, ...params.path);
 
 	// 检查文件是否存在

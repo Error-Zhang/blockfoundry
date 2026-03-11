@@ -33,7 +33,7 @@ export default function BlockManagementPage() {
 
 	const [form] = Form.useForm();
 
-	const { loading, handle: loadBlocks } = useAsyncAction(getBlocks, {
+	const { loading, handler: loadBlocks } = useAsyncAction(getBlocks, {
 		onSuccess: (data) => {
 			setBlocks(data!.blocks);
 			setTotalCount(data!.totalCount);
@@ -44,10 +44,10 @@ export default function BlockManagementPage() {
 		loadBlocks(currentFolderId);
 	}, [currentFolderId]);
 
-	const { loading: modelLoadingUpdate, handle: handleEditBlock } = useAsyncAction(updateBlock, {
+	const { loading: modelLoadingUpdate, handler: handleEditBlock } = useAsyncAction(updateBlock, {
 		onSuccess: () => loadBlocks(currentFolderId),
 	});
-	const { loading: modelLoadingCreate, handle: handleCreateBlock } = useAsyncAction(createBlock, {
+	const { loading: modelLoadingCreate, handler: handleCreateBlock } = useAsyncAction(createBlock, {
 		onSuccess: () => loadBlocks(currentFolderId),
 	});
 
@@ -79,7 +79,7 @@ export default function BlockManagementPage() {
 		setModalVisible(true);
 	};
 
-	const { handle: handleDelete } = useAsyncAction(deleteBlock, {
+	const { handler: handleDelete } = useAsyncAction(deleteBlock, {
 		onSuccess: () => loadBlocks(currentFolderId),
 	});
 

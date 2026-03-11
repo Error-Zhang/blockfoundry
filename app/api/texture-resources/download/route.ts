@@ -30,7 +30,7 @@ export const POST = apiHandler({
 
 		await asyncPool(4, resources, async (resource) => {
 			try {
-				const filePath = FileStorage.getPath(DIR_NAMES.TEXTURES, resource.fileName);
+				const filePath = FileStorage.getFilePath(DIR_NAMES.TEXTURES, resource.fileName);
 				const buffer = await readFile(filePath);
 				zip.file(resource.fileName, buffer);
 			} catch (err) {

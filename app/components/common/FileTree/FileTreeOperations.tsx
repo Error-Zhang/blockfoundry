@@ -1,4 +1,4 @@
-import { ErrorHandler } from '@/app/utils/errorHandler';
+import { ErrorHandler } from '@/app/components/common/FileTree/errorHandler';
 import { ApiResponse } from '@/lib/api';
 import { triggerDownload } from '@/app/components/common/FileTree/treeUtils';
 

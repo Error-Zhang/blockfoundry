@@ -11,22 +11,22 @@ import {
 	UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { TextureResource } from '../lib/types';
+import { ITextureResource } from '../lib/interface';
 import styles from '../../../styles/ResourceTable.module.scss';
 import { FALLBACK_URL } from '@/lib/constants';
 
 interface ResourceTableProps {
-	resources: TextureResource[];
+	resources: ITextureResource[];
 	loading: boolean;
 	searchText: string;
 	onSearchChange: (value: string) => void;
 	selectedRowKeys?: React.Key[];
-	onSelectedRowKeysChange?: (keys: React.Key[], rows: TextureResource[]) => void;
+	onSelectedRowKeysChange?: (keys: React.Key[], rows: ITextureResource[]) => void;
 	onOpenMergeAtlasModal?: () => void;
-	onPreview: (resource: TextureResource) => void;
-	onEdit: (resource: TextureResource) => void;
+	onPreview: (resource: ITextureResource) => void;
+	onEdit: (resource: ITextureResource) => void;
 	onDelete: (id: string) => void;
-	onDownload: (resource: TextureResource) => void;
+	onDownload: (resource: ITextureResource) => void;
 	onUpload: () => void;
 	onBatchUpload: () => void;
 	isExpanded?: boolean;
@@ -54,29 +54,26 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 	const { message } = App.useApp();
 
 	// 表格列定义
-	const columns: ColumnsType<TextureResource> = [
+	const columns: ColumnsType<ITextureResource> = [
 		{
 			title: '预览',
 			dataIndex: 'url',
 			key: 'preview',
 			width: 80,
-			render: (url: string, record: TextureResource) => (
+			render: (url: string, record: ITextureResource) => (
 				<Image width={50} height={50} src={url} fallback={FALLBACK_URL} className={styles.resourceThumbnail} />
 			),
 		},
 		{
-			title: '名称',
+			title: '名称(日期)',
 			dataIndex: 'name',
 			key: 'name',
-			width: 160,
-			render: (text: string, record: TextureResource) => {
-				// 显示文件夹路径
-				const displayPath = record.folderPath ? record.folderPath.replace(/\./g, '\\') : '';
-
+			width: 80,
+			render: (text: string, record: ITextureResource) => {
 				return (
 					<div>
 						<div className={styles.resourceName}>{text}</div>
-						<div className={styles.resourceFilename}>{record.description || displayPath}</div>
+						<div className={styles.resourceDetail}>{record.updatedAt}</div>
 					</div>
 				);
 			},
@@ -85,8 +82,8 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			title: '尺寸',
 			key: 'size',
 			width: 100,
-			render: (_, record: TextureResource) => (
-				<Tag>
+			render: (_, record: ITextureResource) => (
+				<Tag color="blue">
 					{record.width} × {record.height}
 				</Tag>
 			),
@@ -95,10 +92,29 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			title: '格式',
 			dataIndex: 'format',
 			key: 'format',
-			width: 80,
+			width: 50,
 			render: (format: string) => <Tag>{format}</Tag>,
 		},
-
+		{
+			title: '大小',
+			key: 'fileSize',
+			width: 80,
+			render: (_, record: ITextureResource) => <span>{(record.fileSize / 1024).toFixed(1)} KB</span>,
+		},
+		{
+			title: '使用次数',
+			dataIndex: 'usageCount',
+			key: 'usageCount',
+			width: 50,
+			render: (count: number) => <Tag color={count > 10 ? 'red' : count > 5 ? 'orange' : 'default'}>{count}</Tag>,
+		},
+		{
+			title: '状态',
+			dataIndex: 'isPublic',
+			key: 'isPublic',
+			width: 50,
+			render: (isPublic: boolean) => <Tag color={isPublic ? 'green' : 'red'}>{isPublic ? '可用' : '不可用'}</Tag>,
+		},
 		{
 			title: '标签',
 			dataIndex: 'tags',
@@ -114,31 +130,11 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			),
 		},
 		{
-			title: '大小',
-			key: 'fileSize',
-			width: 80,
-			render: (_, record: TextureResource) => <span>{(record.fileSize / 1024).toFixed(1)} KB</span>,
-		},
-		{
-			title: '使用',
-			dataIndex: 'usageCount',
-			key: 'usageCount',
-			width: 70,
-			render: (count: number) => <Tag color={count > 10 ? 'red' : count > 5 ? 'orange' : 'default'}>{count}</Tag>,
-		},
-		{
-			title: '状态',
-			dataIndex: 'isPublic',
-			key: 'isPublic',
-			width: 80,
-			render: (isPublic: boolean) => <Tag color={isPublic ? 'green' : 'red'}>{isPublic ? '可用' : '不可用'}</Tag>,
-		},
-		{
 			title: '操作',
 			key: 'actions',
 			width: 140,
 			fixed: 'right' as const,
-			render: (_, record: TextureResource) => (
+			render: (_, record: ITextureResource) => (
 				<Space>
 					<Button type="text" icon={<EyeOutlined />} onClick={() => onPreview(record)} />
 					<Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
@@ -153,7 +149,7 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 
 	const rowSelection = {
 		selectedRowKeys,
-		onChange: (keys: React.Key[], rows: TextureResource[]) => {
+		onChange: (keys: React.Key[], rows: ITextureResource[]) => {
 			onSelectedRowKeysChange?.(keys, rows);
 		},
 		preserveSelectedRowKeys: true,

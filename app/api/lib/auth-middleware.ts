@@ -1,8 +1,5 @@
 import { auth } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
-import { Handler } from 'hono';
-import { RouteHandler } from 'next/dist/server/base-server';
-import { BaseNextRequest } from 'next/dist/server/base-http';
 import { BadRequestResponse, NotFoundResponse, ServerErrorResponse, UnauthorizedResponse } from '@/app/api/lib/response';
 import { Prisma } from '@prisma/client';
 import { CustomError } from '@/app/api/lib/errors';

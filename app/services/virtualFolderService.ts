@@ -1,9 +1,9 @@
 /**
  * 统一的虚拟文件夹 API 服务
- * 支持通过 category 参数区分不同类型的文件夹（texture/block）
+ * 支持通过 category 参数区分不同类型的文件夹
  */
 
-import { ApiResponse, del, get, post, put } from '@/lib/api';
+import { del, get, post, put } from '@/lib/api';
 
 export interface VirtualFolder {
 	id: string;
@@ -15,7 +15,7 @@ export interface VirtualFolder {
 	updatedAt: string;
 }
 
-export type FolderCategory = 'texture' | 'block';
+export type FolderCategory = 'texture' | 'block' | 'atlas';
 
 /**
  * 获取虚拟文件夹列表
@@ -34,7 +34,7 @@ export async function createVirtualFolder(name: string, parentId: string, catego
 /**
  * 重命名虚拟文件夹
  */
-export async function renameVirtualFolder(id: string, name: string){
+export async function renameVirtualFolder(id: string, name: string) {
 	return put<VirtualFolder>(`/api/virtual-folders/${id}`, { name });
 }
 
@@ -42,7 +42,7 @@ export async function renameVirtualFolder(id: string, name: string){
  * 删除虚拟文件夹
  */
 export async function deleteVirtualFolder(id: string, isClear: boolean = false) {
-	return del<{ deletedCount:number }>(`/api/virtual-folders/${id}?isClear=${isClear}`);
+	return del<{ deletedCount: number }>(`/api/virtual-folders/${id}`, { isClear });
 }
 
 /**
@@ -61,21 +61,4 @@ export async function copyVirtualFolder(id: string, targetParentId: string) {
 	return post<Record<string, string>>(`/api/virtual-folders/${id}/copy`, {
 		targetParentId,
 	});
-}
-
-/**
- * 下载虚拟文件夹
- */
-export async function downloadVirtualFolder(folderId: string): Promise<Blob> {
-	const response = await fetch('/api/virtual-folders/download', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ folderId }),
-	});
-
-	if (!response.ok) {
-		throw new Error('下载失败');
-	}
-
-	return response.blob();
 }

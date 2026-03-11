@@ -11,7 +11,7 @@ export function useNodeEdit<T = any>(editingNode?: TreeNode<T>) {
 			value: editingNode?.title || '',
 		};
 	}
-	// 使用 useMemo 替代多个 useState
+
 	const [state, setState] = useState(getEditingVal());
 
 	// 同步外部变化

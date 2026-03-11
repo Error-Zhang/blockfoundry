@@ -4,7 +4,6 @@ import { SuccessResponse } from '@/app/api/lib/response';
 import { FolderRepo } from '@/app/api/virtual-folders/folder.repo';
 import { getIncludeFolderIds, buildFolderPath } from '@/app/api/virtual-folders/service';
 import { prisma } from '@/lib/prisma';
-import { CustomError } from '@/app/api/lib/errors';
 
 const GetFoldersQuery = z.object({
 	parentId: z.string().optional(),

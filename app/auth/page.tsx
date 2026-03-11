@@ -46,7 +46,7 @@ export default function AuthPage() {
 	const {
 		loading: loginLoading,
 		error: loginError,
-		handle: handleLogin,
+		handler: handleLogin,
 	} = useAsyncAction(login, {
 		onSuccess,
 	});
@@ -54,7 +54,7 @@ export default function AuthPage() {
 	const {
 		loading: registerLoading,
 		error: registerError,
-		handle: handleRegister,
+		handler: handleRegister,
 	} = useAsyncAction(register, {
 		onSuccess,
 	});

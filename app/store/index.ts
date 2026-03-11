@@ -38,6 +38,9 @@ export function createLocalStoreByKeys<U extends Record<string, any>>(namespace:
 			get() {
 				return ns.get(key as string) as Nullable<U[typeof key]>;
 			},
+			set(value: U[typeof key]) {
+				ns.set(key as string, value);
+			},
 			enumerable: true,
 			configurable: true,
 		});

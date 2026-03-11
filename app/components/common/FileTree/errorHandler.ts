@@ -127,15 +127,16 @@ export class ErrorHandler {
 	 * 显示错误消息
 	 */
 	error(content: string, key?: string): void {
-		console.error(content);
 		this.message.error({ content, key });
+		console.error(content);
 	}
 
 	/**
 	 * 显示警告消息
 	 */
-	warning(content: string): void {
+	warning(content: string, data?: any): void {
 		this.message.warning(content);
+		if(data) console.error(content, data);
 	}
 
 	/**

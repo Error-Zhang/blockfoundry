@@ -18,8 +18,8 @@ export const GET = apiHandler({
 		const { id } = params;
 		const atlas = await AtlasRepo.getById(id, user.id);
 
-		const imagePath = FileStorage.getPath(DIR_NAMES.ATLASES, atlas.name, atlas.format);
-		const jsonPath = FileStorage.getPath(DIR_NAMES.ATLASES, atlas.name, 'json');
+		const imagePath = FileStorage.getFilePath(DIR_NAMES.ATLASES, atlas.name, atlas.format);
+		const jsonPath = FileStorage.getFilePath(DIR_NAMES.ATLASES, atlas.name, 'json');
 
 		const imageBuffer = await readFile(imagePath);
 		const jsonBuffer = await readFile(jsonPath);

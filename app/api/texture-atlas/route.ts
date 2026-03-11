@@ -35,13 +35,12 @@ export const POST = apiHandler({
 		// 1.创建一个包含图集全部纹理的文件夹
 		const folder = await FolderRepo.create(data);
 		const textures = await TextureRepo.findByIds(textureIds, user.id, { isPublic: true });
-
-		await TextureRepo.copyBatch(textures, user.id, folder.id);
+		const copyTextures = await TextureRepo.copyBatch(textures, user.id, folder.id);
 
 		// 2.创建图集
-		const result = await createAtlas({ name, userId: user.id, relatedFolderId: folder.id, textures }, options);
+		const atlas = await createAtlas({ name, userId: user.id, relatedFolderId: folder.id, textures: copyTextures }, options);
 
-		return SuccessResponse(result);
+		return SuccessResponse(formatAtlasResponse(atlas));
 	},
 });
 

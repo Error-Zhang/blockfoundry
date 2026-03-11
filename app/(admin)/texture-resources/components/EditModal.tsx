@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import type { UploadFile } from 'antd';
 import { Button, Form, Input, Modal, Select, Space, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { TextureResource } from '../lib/types';
+import { ITextureResource } from '../lib/interface';
 import styles from '../../../styles/Modals.module.scss';
 import { getTags } from '@/app/(admin)/texture-resources/services/textureResourceService';
 
 interface EditModalProps {
 	visible: boolean;
-	editingResource: TextureResource | null;
+	editingResource: ITextureResource | null;
 	form: any;
 	loading: boolean;
 	onCancel: () => void;

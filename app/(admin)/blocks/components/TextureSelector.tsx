@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Empty, Image, Input, Modal, Space } from 'antd';
-import { TextureResource } from '../../texture-resources/lib/types';
+import { ITextureResource } from '../../texture-resources/lib/interface';
 import { getTextureResources } from '../../texture-resources/services/textureResourceService';
 import styles from '../../../styles/TextureSelector.module.scss';
 
@@ -14,7 +14,7 @@ interface TextureSelectorProps {
 }
 
 export default function TextureSelector({ visible, onSelect, onCancel, selectedTextureId }: TextureSelectorProps) {
-	const [textures, setTextures] = useState<TextureResource[]>([]);
+	const [textures, setTextures] = useState<ITextureResource[]>([]);
 	const [searchText, setSearchText] = useState('');
 	const [loading, setLoading] = useState(false);
 
