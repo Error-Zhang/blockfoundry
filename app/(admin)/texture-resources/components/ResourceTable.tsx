@@ -14,6 +14,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { ITextureResource } from '../lib/interface';
 import styles from '../../../styles/ResourceTable.module.scss';
 import { FALLBACK_URL } from '@/lib/constants';
+import { formatFileSize } from '@/app/(admin)/texture-resources/lib/utils';
 
 interface ResourceTableProps {
 	resources: ITextureResource[];
@@ -92,27 +93,27 @@ const ResourceTable: React.FC<ResourceTableProps> = ({
 			title: '格式',
 			dataIndex: 'format',
 			key: 'format',
-			width: 50,
+			width: 40,
 			render: (format: string) => <Tag>{format}</Tag>,
 		},
 		{
 			title: '大小',
 			key: 'fileSize',
-			width: 80,
-			render: (_, record: ITextureResource) => <span>{(record.fileSize / 1024).toFixed(1)} KB</span>,
+			width: 60,
+			render: (_, record: ITextureResource) => <span>{formatFileSize(record.fileSize)}</span>,
 		},
 		{
 			title: '使用次数',
 			dataIndex: 'usageCount',
 			key: 'usageCount',
-			width: 50,
+			width: 40,
 			render: (count: number) => <Tag color={count > 10 ? 'red' : count > 5 ? 'orange' : 'default'}>{count}</Tag>,
 		},
 		{
 			title: '状态',
 			dataIndex: 'isPublic',
 			key: 'isPublic',
-			width: 50,
+			width: 40,
 			render: (isPublic: boolean) => <Tag color={isPublic ? 'green' : 'red'}>{isPublic ? '可用' : '不可用'}</Tag>,
 		},
 		{

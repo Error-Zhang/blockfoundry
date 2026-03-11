@@ -5,6 +5,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { ITextureAtlas } from '../services/textureAtlasService';
 import { FALLBACK_URL } from '@/lib/constants';
 import styles from '../../../styles/ResourceTable.module.scss';
+import { formatFileSize } from '@/app/(admin)/texture-resources/lib/utils';
 
 interface AtlasTableProps {
 	atlases: ITextureAtlas[];
@@ -65,7 +66,7 @@ const AtlasTable: React.FC<AtlasTableProps> = ({
 		{
 			title: '文件大小',
 			key: 'fileSize',
-			render: (_, record: ITextureAtlas) => <span>{(record.fileSize / 1024).toFixed(1)} KB</span>,
+			render: (_, record: ITextureAtlas) => <span>{formatFileSize(record.fileSize)}</span>,
 		},
 		{
 			title: '格式',
@@ -87,11 +88,7 @@ const AtlasTable: React.FC<AtlasTableProps> = ({
 				return (
 					<Space>
 						<Button type="text" icon={<EyeOutlined />} onClick={() => onPreview(record)} />
-						<Button
-							type="text"
-							icon={<EditOutlined />}
-							onClick={() => onEdit(record)}
-						/>
+						<Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
 						<Button type="text" icon={<DownloadOutlined />} onClick={() => onDownload(record)} />
 						<Popconfirm title="确定要删除这个图集吗?" onConfirm={() => onDelete(record.id)} okText="确定" cancelText="取消">
 							<Button type="text" danger icon={<DeleteOutlined />} />

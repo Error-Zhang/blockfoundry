@@ -9,7 +9,6 @@ import EditModal from './components/EditModal';
 import PreviewModal from './components/PreviewModal';
 import BatchUploadModal from './components/BatchUploadModal';
 import { ITextureResource } from './lib/interface';
-import { downloadTextureResource } from './lib/utils';
 import {
 	createTextureResource,
 	deleteTextureResource,
@@ -24,6 +23,7 @@ import { useReactiveSet } from '@/app/hooks/useReactiveSet';
 import { generateTextureAtlas } from '@/app/(admin)/texture-atlas/services/textureAtlasService';
 import { useSidebarWidth } from '@/app/(admin)/texture-resources/hooks/useSidebarWidth';
 import { triggerDownload } from '@/app/components/common/FileTree/treeUtils';
+import { formatFileSize } from '@/app/(admin)/texture-resources/lib/utils';
 
 export default function TextureResourceManagementPage() {
 	const { message } = App.useApp();
@@ -207,8 +207,6 @@ export default function TextureResourceManagementPage() {
 		});
 	};
 
-
-
 	// 统计数据卡片配置
 	const cardConfigs = [
 		{
@@ -232,8 +230,7 @@ export default function TextureResourceManagementPage() {
 		{
 			key: 'totalFileSize',
 			title: '总文件大小',
-			value: (resources.reduce((sum, r) => sum + r.fileSize, 0) / 1024 / 1024).toFixed(2),
-			suffix: 'MB',
+			value: formatFileSize(resources.reduce((sum, r) => sum + r.fileSize, 0)),
 			prefix: <CloudUploadOutlined />,
 		},
 	];
